@@ -189,7 +189,7 @@ function initCalendar() {
 	paramdata["center"] = $("#nwpcenter").val();
 	paramdata["type"] = $("#filetype").val();
 
-	$.getJSON( "./listimports-json2.php", paramdata,  function( data ) {
+	$.getJSON( "./listimports-json.php", paramdata,  function( data ) {
 
 		console.log(data);
 
