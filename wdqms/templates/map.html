@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+  <head>
+  <title>WIGOS Data Quality Monitoring System</title>
+  <meta charset="utf-8">
+  <link href="{% static  "wdqms/ol3/ol.css" %}" rel="stylesheet">
+  <link href="{% static "wdqms/obsmon.css" %}"  rel="stylesheet">
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+  <style>
+  #map {
+    width: 950px;
+    height: 600px;
+  }
+
+  #popup,#popuptemp {
+	background-color: #FFF;
+	border-radius: 10px;
+	box-shadow: 0px 0px 25px 5px #999;
+	color: #111;
+	display: none;
+	min-width: 450px;
+	padding: 25px;
+  }
+
+  .button.b-close, .button.bClose {
+    border-radius: 7px;
+    box-shadow: none;
+    font: bold 131% sans-serif;
+    padding: 0px 6px 2px;
+    position: absolute;
+    right: -7px;
+    top: -7px;
+  }
+
+.button > span {
+    font-size: 84%;
+}
+
+.button {
+    background-color: #2B91AF;
+    border-radius: 10px;
+    box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.3);
+    color: #FFF;
+    cursor: pointer;
+    display: inline-block;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.no-js #loader { display: none;  }
+.js #loader { display: block; position: absolute; left: 100px; top: 0; }
+.se-pre-con {
+	position: absolute;
+	left: 500px;
+	top: 300px;
+	width:64px;
+	height:64px;
+	background: url({% static "wdqms/3.gif" %}) center no-repeat #fff;
+}
+
+
+  </style>
+  </head>
+  <body>
+
+  <div id="wrapper">
+	  <div id="first">
+		<div  id="map"></div>
+	  </div>
+	  <div id="second" style="padding:40px;" >
+		<h1>NWP monitoring pilot project</h2>		
+	
+			<div>
+			<select class="mycontrol" id="filetype">
+				<option value="SYNOP" >SYNOP (surface pressure)</option>
+				<option value="TEMP" selected="selected">TEMP</option>
+			</select>
+			</div>
+			<select class="mycontrol" id="nwpcenter">
+				<option>ECMWF</option>
+				<option selected="selected">JMA</option>
+				<option>DWD</option>
+				<option>NCEP</option>
+			</select>
+			<label>select center</label>
+			<input type="text" id="datepicker" ></input>
+			<label>select date</label>
+			<div>
+			<input type="radio" name="hourpicker" value="0">0h</input>
+			<input type="radio" name="hourpicker" value="6">6h</input>
+			<input type="radio" name="hourpicker" value="12">12h</input>
+			<input type="radio" name="hourpicker" value="18">18h</input>
+			</div>
+
+			<div id="synoplegend">
+			<div><h2>Nr. expected vs. Nr. Received</h2></div>
+			{% if style == "wdqmsmap" %}
+			<?php if ($style == "wdqmsmap") { ?>
+			<div style="color:#009900">normal (>= 80%)</div>
+			<div style="color:#ff9900">availability isuses (>=30%)</div>
+			<div style="color:#ff3300">availability isuses (&lt;30%) </div>
+			<div style="color:#000000">did not report in period </div>
+			<div style="color:#e5e600">not in VolA </div>
+			<div style="color:#ff33cc">more than 100% </div>
+			{% else %}
+			<div style="color:#00FF00">all observations in period</div>
+			<div style="color:#009900">two observations in period</div>
+			<div style="color:#0000CD">one observation in period </div>
+			<div style="color:#000000">did not report in period </div>
+			<div style="color:#e5e600">not in VolA </div>
+			<div style="color:#ff33cc">more than 100% </div>
+			{% endif %}
+			</div>
+			<div id="templegend">
+			<div><h2>Complete radiosonde launches</h2><h2></h2></div>
+			<div style="color:#009900">at least one complete launch (all variables and layers)</div>
+			<div style="color:#334CFF">propably PILOT (complete wind but no others)</div>
+			<div style="color:#FFFF00">incomplete lauch (missing variables)</div>
+			<div style="color:#FF8000">incomplete lauch (missing layers)</div>
+			<div style="color:#000000">did not report in period </div>
+			<div style="color:#FF00BF">not in VolA </div>
+			</div>
+
+	</div>
+
+  </div>
+<div >
+
+
+</div>
+  <script src="{% static "wdqms/ol3/ol.js" %}"></script>
+  <script src="{% static "wdqms/jquery-3.1.0.min.js" %}"></script>
+  <script src="{% static "wdqms/jquery.bpopup.min.js" %}"></script>	
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+  <script>
+
+
+function updateMapLayer() {
+			
+	var date = new Date( $('#datepicker').val()  );
+	var hour =  $('input[name="hourpicker"]:checked').val() ;
+		
+	year = 	date.getFullYear();
+	month = date.getMonth()+1;
+	day = date.getDate();
+
+	synoptichour = 	parseInt(hour);
+
+	center = $("#nwpcenter").val();
+	filetype = $("#filetype").val();
+
+	if (filetype == "SYNOP") {
+		activelayer = obslayer;
+		inactivelayer = sondelayer;
+	} else if (filetype == "TEMP") {
+		activelayer = sondelayer;
+		inactivelayer = obslayer;
+	}
+
+	viewparam = 'year:' + year + ";month:"+month+";day:"+day+";hourperiod:"+synoptichour+";center:"+center ;
+
+	console.log(viewparam);
+		
+	params = activelayer.getSource().getParams();
+	params.VIEWPARAMS = viewparam;
+	activelayer.setVisible(true);
+	inactivelayer.setVisible(false);
+		
+	activelayer.getSource().changed();
+	$("#spinner").show();
+
+	activelayer.getSource().setAttributions([new ol.Attribution({
+      		html: center + ":" + year + "/" + month + "/" + day + " " + synoptichour  + ":00-" + (synoptichour + 5) + ":59"
+    	})]);
+	console.log("done..");
+}
+
+var dateinfo;
+
+function initCalendar() {
+
+
+	paramdata = {} ;
+
+	paramdata["center"] = $("#nwpcenter").val();
+	paramdata["type"] = $("#filetype").val();
+
+	$.getJSON( "./listimports-json2.php", paramdata,  function( data ) {
+
+		console.log(data);
+
+		dateinfo = data ;
+
+	        $( "#datepicker" ).datepicker({ 
+			dateFormat: 'yy/mm/dd' ,
+			defaultDate: dateinfo.maxdate,
+			beforeShowDay: function(date){
+	        		var string = jQuery.datepicker.formatDate('yy/mm/dd', date);
+	        		return [ string in dateinfo.dates ]
+	    		},
+			onSelect: function(date,inst) {
+	        		//var string = jQuery.datepicker.formatDate('yy/mm/dd', date);
+				$("input[name='hourpicker']").prop('disabled','disabled');
+
+				console.log(dateinfo.dates[date]);
+				activehours = dateinfo.dates[date];
+				for (var i=0 ; i < activehours.length ; i++ ) {
+					$("input[name='hourpicker'][value='" + parseInt(activehours[i]) + "']").prop('disabled',false);
+					
+				}
+			}
+		});
+
+		$("#datepicker").val(dateinfo.maxdate);
+		$("input[name='hourpicker']").prop('disabled','disabled');
+		for (var i=0; i<dateinfo.maxtimes.length ; i++) {
+			$("input[name='hourpicker'][value='" + parseInt(dateinfo.maxtimes[i] ) + "']").prop('disabled',false);
+		}
+		$("input[name='hourpicker'][value='" + parseInt(dateinfo.maxtime) + "']").prop('checked','checked');
+
+		updateMapLayer();
+
+	});
+}
+
+
+$('input[name="hourpicker"]').on('change', function() {
+	updateMapLayer();
+});
+
+
+$('select.mycontrol').on('change', function() {
+	initCalendar();
+	updateMapLayer();
+});
+
+$('#filetype').on('change', function() {
+	var filetype = $("#filetype").val();
+
+	if (filetype=="SYNOP") {
+		$("#synoplegend").show();
+		$("#templegend").hide();
+	} else if (filetype == "TEMP") {
+		$("#synoplegend").hide();
+		$("#templegend").show();
+	}
+});
+   
+</script>
+
+  
+  <script type="text/javascript">
+
+var sondelayer =  new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          params: {'FORMAT': 'image/png',
+                   'VERSION': '1.1.1',  
+                LAYERS: 'wdqms:radiosondes',
+                STYLES: 'radiosondesstyle',
+		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
+          }, 
+	  imageLoadFunction: function(image, src) {
+		var imageElement = image.getImage();
+		imageElement.onload = function() {
+			$("#spinner").hide();
+		};
+		imageElement.src = src;
+	 },
+        }),
+	visible: false,
+      }) ;
+
+var obslayer =  new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          params: {'FORMAT': 'image/png',
+                   'VERSION': '1.1.1',  
+                LAYERS: 'wdqms:percentreceived',
+                STYLES: '{{style}}',
+		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
+          }, 
+	  imageLoadFunction: function(image, src) {
+		var imageElement = image.getImage();
+		imageElement.onload = function() {
+			$("#spinner").hide();
+		};
+		imageElement.src = src;
+			
+	 },
+		  
+		  
+        }),
+	visible: false,
+      }) ;
+
+var map = new ol.Map({
+    target: 'map',
+    layers: [
+new ol.layer.Tile({
+      source: new ol.source.XYZ({
+        url: 'https://api.mapbox.com/styles/v1/kurt-hectic/cj488lfn91qxh2rrz0nghg0y3/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoia3VydC1oZWN0aWMiLCJhIjoiY2loNGtsNzc0MHpvdHgxbTBxejQzOGVpZiJ9.NiOdnMqDcZKeR6Oxo7tWmw'
+      })
+    }),
+	obslayer,	
+	sondelayer,	
+    ],
+    view: new ol.View({
+      center: [-13657275.569447909, 5699392.057118396],
+      zoom: 2
+    }),
+    controls: ol.control.defaults({
+      attributionOptions: {
+        collapsible: false
+      }
+    })
+  });
+
+
+function onMoveEnd(evt) {
+	$("#spinner").show();
+}
+
+map.on('moveend', onMoveEnd);
+
+map.on('singleclick', function(evt) {
+	var view = map.getView();
+	var viewResolution = view.getResolution();
+
+	filetype = $("#filetype").val();
+
+	if (filetype == "SYNOP") {
+		url=url.replace(/wdqms%3Apercentreceived/g,'wdqms:percentreceivedex');
+		var popupid = "#popup";
+		var source = obslayer.getSource();	
+		var url = source.getGetFeatureInfoUrl(
+	  		evt.coordinate, viewResolution, view.getProjection(), {'INFO_FORMAT': 'application/json', 'FEATURE_COUNT': 50});
+		url=url.replace(/wdqms%3Apercentreceived/g,'wdqms:percentreceivedex');
+	} else if (filetype == "TEMP") { // nothing for the moment
+		var popupid = "#popuptemp";
+		var source = sondelayer.getSource();	
+		var url = source.getGetFeatureInfoUrl(
+	  		evt.coordinate, viewResolution, view.getProjection(), {'INFO_FORMAT': 'application/json', 'FEATURE_COUNT': 50});
+	}
+
+	if (url) {
+		$.getJSON( url , function( data ) {
+		console.log(data);
+		  
+		$("#popuptablebody").empty();
+		$("#popuptablebodytemp").empty();
+	  
+		  $.each( data.features, function( idx ) {
+			prop = data.features[idx].properties
+			if (filetype == "SYNOP") {
+			    {% if style == "wdqmsmap"  %}
+				if (prop.per_received > 1.0) {
+					color="#ff33cc";			
+				}	
+				else if (prop.per_received>=0.80) {
+					color="#00cc00";			
+				} else if (prop.per_received < 0.80 && prop.per_received >= 0.30) {
+					color="#ff9900";			
+				} else if (prop.per_received < 0.30 ) {
+					color="#ff0000";			
+				} 
+				if (prop.isempty) {
+					color="#000000";			
+				}
+				if (! prop.invola) {
+					color="#ffff00";
+
+				}
+			      {% else  %}
+	
+				if (prop.per_received > 1.0) {
+					color="#ff33cc";			
+				}	
+				else if (prop.nr_received == 1) {
+					color="#0000CD";			
+				}	
+				else if (prop.per_received==1.00) {
+					color="#00FF00";			
+				} else if (prop.nr_received >=  2 && prop.per_received < 1.0 ) {
+					color="#009900";			
+				}
+				if (prop.isempty) {
+					color="#000000";			
+				}
+				if (! prop.invola) {
+					color="#ffff00";
+				}
+				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="https://oscar.wmo.int/surface/index.html#/search/station/stationReportDetails/'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td></tr>') ;
+			     {% endif  %}
+	
+			} else if (filetype=="TEMP") {
+
+				var color = "black";
+				var myprops = ['nr_received_2_tropo','nr_received_2_strato','nr_received_29_tropo','nr_received_29_strato','nr_received_3_tropo','nr_received_3_strato','nr_received_4_tropo','nr_received_4_strato'];
+
+				var tmpstr = "";
+				for (var i=0; i<myprops.length ; i++) {
+					tmpstr = tmpstr + "<td>" + prop[myprops[i]] + "</td>";
+				}
+
+				$("#popuptablebodytemp").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="https://oscar.wmo.int/surface/index.html#/search/station/stationReportDetails/'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.sondestatus+'</td>'+tmpstr+'</tr>') ;
+			}
+
+
+
+			    
+		  });
+ 
+
+
+
+		$(popupid).bPopup({
+		    follow: [false, false], //x, y
+		    position: [150, 400] //x, y
+		  });	  
+		 
+		  
+		});
+
+
+		//document.getElementById('nodelist').innerHTML = '<iframe seamless src="' + url + '"></iframe>';
+	}
+});
+
+obj = {};
+
+
+setTimeout(function(){
+	   window.location.reload(1);
+}, 12*60*60*1000); //refresh every 12h
+
+$( document ).ready(function() {
+	$("#filetype").trigger('change');
+});
+
+</script>
+
+  <div id="spinner"  class="se-pre-con"></div>
+
+
+    <div style="display:none;" id="popup"><span class="button b-close"><span>X</span></span>
+	<table id="popuptable">
+		<thead>
+		<tr>
+		<th>IndexNr</th>
+		<th>Name</th>
+		<th>Nr received</th>
+		<th>Nr expected</th>
+		</tr>
+		</thead>	
+		<tbody id="popuptablebody">
+		</tbody>
+	</table> 
+    </div>
+	
+	
+    <div style="display:none;" id="popuptemp"><span class="button b-close"><span>X</span></span>
+	<table id="popuptabletemp">
+		<thead>
+		<tr>
+		<th>IndexNr</th>
+		<th>Name</th>
+		<th>Status</th>
+		<th>Nr UA temp (trop) </th>
+		<th>Nr UA temp (stra) </th>
+		<th>Nr UA humidity (trop) </th>
+		<th>Nr UA humidity (stra) </th>
+		<th>Nr UA zonal wind (trop) </th>
+		<th>Nr UA zonal wind (stra) </th>
+		<th>Nr UA merio wind (trop) </th>
+		<th>Nr UA merio wind (stra) </th>
+		</tr>
+		</thead>	
+		<tbody id="popuptablebodytemp">
+		</tbody>
+	</table> 
+    </div>
+	
+
+ </body>
+</html>

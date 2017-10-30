@@ -1,0 +1,114 @@
+{% from datetime import date, timedelta %}
+<html>
+
+<head>
+
+<style>
+div.fil { float:left; width:100%; }
+td.empty , div.empty { background-color:red; }
+td.imported ,div.imported { background-color:green; }
+td.border { padding-right:15px; }
+td { padding:0px ; width:40px;}
+span.text { padding-left:3px ; }
+
+</style>
+
+</head>
+
+<body>
+
+<h1>List of the imported files since 2016</h1>
+<p>As per {{now | date:"DATETIME_FORMAT" }} <a href="" id="reload">reload</a></p>
+<table>
+<thead>
+<tr><td>Date</td>
+
+{%
+centers = ["ECMWF","JMA","DWD","NCEP"]
+tempcenters = ["ECMWF","JMA"]
+
+for center in centers : %}
+ <td colspan='4'>{{center}}</td>
+
+</tr>
+<tr><td></td>
+{% 
+for center in centers : %}
+  {{ "<td>0:00</td><td>6:00</td><td>12:00</td><td class='border'>18:00</td>" }}
+
+</tr>
+</thead>
+
+{% 
+
+startdate = date(2016,01,01)
+enddate = date()
+ 
+delta = enddate - startdate
+
+for i in range(delta.days + 1):
+    mydate = startdate + timedelta(days=i)
+%}
+    <tr><td>{{mydate| date:"YY/mm/dd"}}</td>
+		 
+	foreach ($centers as $center) {
+		foreach (array(0,6,12,18) as $period) {
+
+			if ( in_array($center,$tempcenters) ) {
+				$keysyn = date("Y-n-j",strtotime($date)) . "-${period}-${center}-SYNOP";
+				$keytmp = date("Y-n-j",strtotime($date)) . "-${period}-${center}-TEMP";
+
+				$hassyn = array_key_exists($keysyn,$dates);
+				$hastmp = array_key_exists($keytmp,$dates);
+
+				if ( !$hassyn and !$hastmp ) {
+					$synclass = "empty";
+					$tmpclass = "empty";
+				} elseif ( $hassyn and $hastmp ) {
+					$synclass = "imported";
+					$tmpclass = "imported";
+				} elseif ( !$hassyn and $hastmp ) {
+					$synclass = "empty";
+					$tmpclass = "imported";
+				} elseif ( $hassyn and !$hastmp ) {
+					$synclass = "imported";
+					$tmpclass = "empty";
+				}
+				echo "<td class='empty'><div class='fil $synclass' ><span class='text'>SYN</div><div class='fil $tmpclass'><span class='text'>TMP</span></div></td>";
+
+			} else {
+				$key = date("Y-n-j",strtotime($date)) . "-${period}-${center}-SYNOP";
+	
+				if (array_key_exists($key,$dates)) {
+					echo "<td class='imported'></td>";	
+				} else {
+					echo "<td class='empty'></td>";
+				}
+			}
+	
+	
+		}
+	}
+	
+	echo "</tr>";  
+
+	
+	$date = date ("Y-m-d", strtotime("-1 day", strtotime($date)));
+	
+	
+ }
+ 
+?>
+</table>
+
+<script>
+	setTimeout(function(){
+	   window.location.reload(1);
+	}, 6*60*60*1000); //refresh every 6h
+
+</script>
+
+</body>
+
+
+</html>

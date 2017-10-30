@@ -1,0 +1,68 @@
+{% load wdqms_tag %}
+<html>
+<head>
+
+<style>
+div.fil { float:left; width:100%; }
+td.empty , div.empty { background-color:red; }
+td.imported ,div.imported { background-color:green; }
+td.border { padding-right:15px; }
+td { padding:0px ; width:40px;}
+span.text { padding-left:3px ; }
+
+</style>
+
+</head>
+
+<body>
+
+<h1>List of the imported files since 2016</h1>
+<p>As per {{now | date:"DATETIME_FORMAT" }} <a href="" id="reload">reload</a></p>
+<table>
+<thead>
+<tr><td>Date</td>
+
+{% for center in centers  %}
+<td colspan='4'>{{center}}</td>
+{% endfor %} </tr> <tr><td></td>
+{% for c in centers %}
+<td>0:00</td><td>6:00</td><td>12:00</td><td class='border'>18:00</td>
+{% endfor %}
+
+</tr>
+</thead>
+
+{% for mydate in dates %}
+
+  <tr><td>{{mydate| date:"Y/m/d"}}</td>
+  {% for center in centers %}
+    {% for period in nwpperiods %}
+	{% if center in tempcenters and mydate >= tempstartdate %}
+             <td class='empty'>
+		<div class="fil {% make_class periods mydate period center 'SYNOP' %}" ><span class='text'>SYN</div>
+		<div class="fil {% make_class periods mydate period center 'TEMP' %}" ><span class='text'>TMP</div>
+	     </td>
+         {% else %}
+		<td class="{% make_class periods mydate period center 'SYNOP' %}" ></td>
+         {% endif %}
+
+    {% endfor %}
+  {% endfor %}
+
+  </tr>
+
+
+{% endfor %}
+
+</table>
+
+<script>
+	setTimeout(function(){
+	   window.location.reload(1);
+	}, 6*60*60*1000); //refresh every 6h
+
+</script>
+
+</body>
+
+</html>
