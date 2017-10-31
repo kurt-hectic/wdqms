@@ -15,14 +15,24 @@ Including another URLconf
 """
 from django.conf.urls import include,url
 from django.contrib import admin
-
+from django.views.generic.base import RedirectView
 from . import views 
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^$', views.index, name='index'),
-    url(r'^listimports-json.php', views.listimports_json, name='listimports_json'),
-    url(r'^listimports', views.listimports, name='listimports'),
-    url(r'^map', views.map, name='map'),
+    url(r'^listspace$', views.listspace, name='listspace'),
+    url(r'^listimports-json', views.listimports_json, name='listimports_json'),
+    url(r'^listimports$', views.listimports, name='listimports'),
+    url(r'^map$', views.map, name='map'),
     url(r'^map.html', views.map, name='map'),
+    url(r'^country_cal', views.country_cal, name='country_cal'),
+    url(r'^country_dt', views.country_dt, name='country_dt'),
+    url(r'^country$', views.country, name='country'),
+    url(r'^data$', views.data, name='data'),
+
+    url(r'^listimports.php$', RedirectView.as_view(url='listimports'), name='legacy-listimports' ),
+    url(r'^map.php$', RedirectView.as_view(url='map'), name='legacy-map' ),
+    url(r'^country.php$', RedirectView.as_view(url='country'), name='legacy-country' ),
+
 ]

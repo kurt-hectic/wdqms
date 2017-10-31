@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <link href="{% static  "wdqms/ol3/ol.css" %}" rel="stylesheet">
   <link href="{% static "wdqms/obsmon.css" %}"  rel="stylesheet">
-  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  <link href="{% static "wdqms/jquery-ui.min.css" %}"  rel="stylesheet">
 
   <style>
   #map {
@@ -134,7 +134,7 @@
   <script src="{% static "wdqms/ol3/ol.js" %}"></script>
   <script src="{% static "wdqms/jquery-3.1.0.min.js" %}"></script>
   <script src="{% static "wdqms/jquery.bpopup.min.js" %}"></script>	
-  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script src="{% static "wdqms/jquery-ui.min.js" %}"></script>	
 
   <script>
 
@@ -189,7 +189,7 @@ function initCalendar() {
 	paramdata["center"] = $("#nwpcenter").val();
 	paramdata["type"] = $("#filetype").val();
 
-	$.getJSON( "./listimports-json.php", paramdata,  function( data ) {
+	$.getJSON( "./listimports-json", paramdata,  function( data ) {
 
 		console.log(data);
 

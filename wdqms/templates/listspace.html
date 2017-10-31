@@ -1,0 +1,126 @@
+<html>
+
+<head>
+
+<style>
+td { padding-right:10px; }
+td.empty { background-color:red; }
+td.imported { background-color:green; }
+
+</style>
+
+</head>
+
+<body>
+
+<h1> WDQMS table utilisation </h1>
+<p>As per {% now "DATETIME_FORMAT" %} <a href="" id="reload">reload</a></p>
+
+<script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+
+<div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+
+
+<script>
+function humanFileSize(bytes, si) {
+    var thresh = si ? 1000 : 1024;
+    if(Math.abs(bytes) < thresh) {
+        return bytes + ' B';
+    }
+    var units = si
+        ? ['kB','MB','GB','TB','PB','EB','ZB','YB']
+        : ['KiB','MiB','GiB','TiB','PiB','EiB','ZiB','YiB'];
+    var u = -1;
+    do {
+        bytes /= thresh;
+        ++u;
+    } while(Math.abs(bytes) >= thresh && u < units.length - 1);
+	//console.log(bytes.toFixed(2)+' '+units[u]);
+    return bytes.toFixed(2)+' '+units[u];
+}
+
+$(function () {
+    Highcharts.chart('container', {
+        chart: {
+            type: 'spline'
+        },
+        title: {
+            text: 'table size on WDQMS server'
+        },
+        series: [
+        {% for name,info in tableinfo.items %}
+
+	{
+            name: '{{name}}',
+            // Define the data points. All series have a dummy year
+            // of 1970/71 in order to be compared on the same x axis. Note
+            // that in JavaScript, months start at 0 for January, 1 for February etc.
+            data: [
+                {% for mydata in info.ret %}
+		   [{{ mydata.1 }}, {{ mydata.0 }}],
+                {% endfor %}
+            ],
+	    yAxis: {{ forloop.counter0 }} 
+
+        },
+        {% endfor %}
+
+	],
+        xAxis: {
+            type: 'datetime',
+            //dateTimeLabelFormats: { // don't display the dummy year
+             //   month: '%e. %b',
+              //  year: '%b'
+            //},
+            title: {
+                text: 'Date'
+            },
+	    labels: {
+              format: '{value:%Y-%m-%d %H:%M}',
+            }
+        },
+        yAxis: [
+        {% for name,info in tableinfo.items %}
+		{
+	            title: {
+	                text: 'table size {{name}}>'
+	            },
+	            //type: 'logarithmic',
+		    min: {{info.min}},
+	            labels: {
+            		}
+
+
+	        },
+	
+        {% endfor %}
+		
+
+	],
+        tooltip: {
+            headerFormat: '<b>{series.name}</b><br>',
+            //pointFormat: '{point.x:%Y-%m-%d %H:%M} | {point.y:,.0f} kb'
+            formatter: function () {
+		var date = new Date(this.x);
+		var size = humanFileSize(this.y,true);
+                return 'The value for <b>' + date.toISOString() +
+                    '</b> is <b>' + size + '</b>';
+            }
+        },
+
+        plotOptions: {
+            spline: {
+                marker: {
+                    enabled: true
+                }
+            }
+        },
+
+    });
+});
+
+</script>
+
+</html>
