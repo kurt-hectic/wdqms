@@ -8,12 +8,64 @@ from django.db.models import Max,Min,Sum,Count
 from datetime import date,timedelta,datetime
 from django.db import connection, transaction
 from wdqms.decorators import json_response
+from django.http import StreamingHttpResponse
+
+import csv
 
 def index(request):
     template = loader.get_template('index.html')
     context = {}
     return HttpResponse(template.render(context,request))
 
+def availability_report(request):
+    daysback = int(request.GET.get('daysback',7))
+    mode = request.GET.get('mode','wdqms')
+
+    dateselects = []
+    for i in range(daysback):
+         d = date.today() - timedelta(days=i)
+         dateselects.append( "( yyyy={} and mm={} and dd={}   )".format( d.year, d.month , d.day  )  )
+
+    wheresqlstring = " or ".join(dateselects)
+
+    if mode=="wdqms":
+
+        sql = """select wigosid,stationname,countrycode,isocc, DATE(yyyy || '-' || mm || '-' || dd) as date,
+            sum(nr_expected) as nr_expected, sum(nr_received) as nr_received, sum(nr_used) as nr_used, sum(nr_rejected) as nr_rejected,
+            sum(nr_blacklisted) as nr_blacklisted , sum(nr_passive) as nr_passive, center
+            from stationsbyperiodex s left join countrymetadata c on (c.vola_code = s.countrycode)
+            where ({})
+            and varid=110 and stationname not like '%unknown%' and center='ECMWF'
+            group by wigosid,stationname,countrycode,isocc,yyyy,mm,dd,center
+            order by yyyy,mm,dd,countrycode """.format( wheresqlstring )
+
+        fieldnames = [ "stationId","stationName","countryCode","isoCountryCode","date","NrExpected","NrReceived","NrUsed","NrRejected","NrBlacklisted","NrPassive","center" ]
+
+    elif mode=="smm":  #list number of 6h intervals in which an observation was expected and one came and aggregate by day and station
+
+        sql= """select wigosid,stationname,countrycode,isocc, DATE(yyyy || '-' || mm || '-' || dd) as date,
+                count( CASE WHEN nr_expected = 0 THEN NULL ELSE nr_expected END ) as nr_expected,
+                ( CASE WHEN nr_received = 0 THEN NULL ELSE nr_received END ) as nr_received, center
+                stationsbyperiodex s left join countrymetadata c on (c.vola_code = s.countrycode)
+                ( {} )
+                and varid=110 and stationname not like '%unknown%' and center='ECMWF'
+                group by wigosid,stationname,countrycode,isocc,yyyy,mm,dd,center
+                order by yyyy,mm,dd,countrycode """.format( wheresqlstring )
+
+        fieldnames = [ "stationId","stationName","countryCode","isoCountryCode","date","NrExpected","NrReceived","center" ]
+
+    cursor = connection.cursor()
+    cursor.execute(sql)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="wdqms.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(fieldnames)
+    for row in cursor:
+       writer.writerow( row )
+
+    return response
 
 def listspace(request):
 

@@ -287,14 +287,14 @@ function updateCalendar(initial) {
 
 function updateMap(initial) {
 	
-	var date = new Date( $('#datetimepicker_start_time').val()  );
+	var date = new Date( $('#datepicker').val()  );
 
 	year =  date.getFullYear();
 	month = date.getMonth()+1;
 	day = date.getDate();
 	center = $("#nwpcenter").val();
 	
-	viewparam = 'year:' + year + ";month:"+month+";day:"+day+";center:"+center+";countrycode:{{ country.vola_code }}" ;
+	viewparam = 'year:' + year + ";month:"+month+";day:"+day+";center:"+center+";countrycode:{{ country.code }}" ;
 	//console.log(viewparam);
 
 	if (initial === true ) {

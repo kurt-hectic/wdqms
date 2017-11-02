@@ -30,10 +30,12 @@ urlpatterns = [
     url(r'^country_dt', views.country_dt, name='country_dt'),
     url(r'^country$', views.country, name='country'),
     url(r'^data$', views.data, name='data'),
+    url(r'^availability-report$', views.availability_report, name='availability_report'),
 
     url(r'^listimports.php$', RedirectView.as_view(url='listimports'), name='legacy-listimports' ),
     url(r'^map.php$', RedirectView.as_view(url='map'), name='legacy-map' ),
     url(r'^country.php$', RedirectView.as_view(url='country'), name='legacy-country' ),
     url(r'^listspace.php$', RedirectView.as_view(url='listspace'), name='legacy-listspace' ),
+    url(r'^availability-report.php$', RedirectView.as_view(url='availability-report'), name='legacy-availability-report' ),
 
 ]
