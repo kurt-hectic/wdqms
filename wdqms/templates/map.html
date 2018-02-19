@@ -397,7 +397,7 @@ map.on('singleclick', function(evt) {
 					color="#ffff00";
 				}
 			     {% endif  %}
-				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="https://oscar.wmo.int/surface/index.html#/search/station/stationReportDetails/'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td><td><a href="/station/'+prop.wigosid+'">Details</a></td></tr>') ;
+				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td><td><a href="{% url 'station'  %}'+prop.wigosid+'">Details</a></td></tr>') ;
 	
 			} else if (filetype=="TEMP") {
 
@@ -409,7 +409,7 @@ map.on('singleclick', function(evt) {
 					tmpstr = tmpstr + "<td>" + prop[myprops[i]] + "</td>";
 				}
 
-				$("#popuptablebodytemp").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="https://oscar.wmo.int/surface/index.html#/search/station/stationReportDetails/'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.sondestatus+'</td>'+tmpstr+'</tr>') ;
+				$("#popuptablebodytemp").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.sondestatus+'</td>'+tmpstr+'</tr>') ;
 			}
 
 

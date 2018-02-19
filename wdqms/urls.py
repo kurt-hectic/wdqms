@@ -33,6 +33,7 @@ urlpatterns = [
     url(r'^data$', views.data, name='data'),
     url(r'^availability-report$', views.availability_report, name='availability_report'),
     url(r'^station/(?P<stationid>[^/]+)$', views.station, name='station'),
+    url(r'^station/$', views.station, name='station'),
     url(r'^api/nrreceived/(?P<stationid>[^/]+)/(?P<variable>[^/]+)', views.nrreceived, name='nrreceived' ),
 
     url(r'^listimports.php$', RedirectView.as_view(url='listimports'), name='legacy-listimports' ),
