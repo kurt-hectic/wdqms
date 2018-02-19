@@ -6,6 +6,7 @@ class Station(models.Model):
 	name = models.CharField(max_length=200,db_column='stationname')
 	indexnbr = models.IntegerField(db_column='indexnbr')
 	subindexnbr = models.IntegerField(db_column='indexsubnbr')
+	wigosid = models.CharField(max_length=200,db_column='wigosid')
 	code = models.IntegerField(db_column='countrycode')
 	area = models.CharField(max_length=200,db_column='countryarea')
 	latitude = models.FloatField()

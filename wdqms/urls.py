@@ -16,6 +16,7 @@ Including another URLconf
 from django.conf.urls import include,url
 from django.contrib import admin
 from django.views.generic.base import RedirectView
+
 from . import views 
 
 urlpatterns = [
@@ -31,11 +32,12 @@ urlpatterns = [
     url(r'^country$', views.country, name='country'),
     url(r'^data$', views.data, name='data'),
     url(r'^availability-report$', views.availability_report, name='availability_report'),
+    url(r'^station/(?P<stationid>[^/]+)$', views.station, name='station'),
+    url(r'^api/nrreceived/(?P<stationid>[^/]+)/(?P<variable>[^/]+)', views.nrreceived, name='nrreceived' ),
 
     url(r'^listimports.php$', RedirectView.as_view(url='listimports'), name='legacy-listimports' ),
     url(r'^map.php$', RedirectView.as_view(url='map'), name='legacy-map' ),
     url(r'^country.php$', RedirectView.as_view(url='country'), name='legacy-country' ),
     url(r'^listspace.php$', RedirectView.as_view(url='listspace'), name='legacy-listspace' ),
     url(r'^availability-report.php$', RedirectView.as_view(url='availability-report'), name='legacy-availability-report' ),
-
 ]

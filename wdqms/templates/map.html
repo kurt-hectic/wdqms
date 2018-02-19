@@ -336,7 +336,7 @@ map.on('singleclick', function(evt) {
 	filetype = $("#filetype").val();
 
 	if (filetype == "SYNOP") {
-		url=url.replace(/wdqms%3Apercentreceived/g,'wdqms:percentreceivedex');
+		//url=url.replace(/wdqms%3Apercentreceived/g,'wdqms:percentreceivedex');
 		var popupid = "#popup";
 		var source = obslayer.getSource();	
 		var url = source.getGetFeatureInfoUrl(
@@ -357,7 +357,7 @@ map.on('singleclick', function(evt) {
 		$("#popuptablebodytemp").empty();
 	  
 		  $.each( data.features, function( idx ) {
-			prop = data.features[idx].properties
+			prop = data.features[idx].properties;
 			if (filetype == "SYNOP") {
 			    {% if style == "wdqmsmap"  %}
 				if (prop.per_received > 1.0) {
@@ -396,8 +396,8 @@ map.on('singleclick', function(evt) {
 				if (! prop.invola) {
 					color="#ffff00";
 				}
-				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="https://oscar.wmo.int/surface/index.html#/search/station/stationReportDetails/'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td></tr>') ;
 			     {% endif  %}
+				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="https://oscar.wmo.int/surface/index.html#/search/station/stationReportDetails/'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td><td><a href="/station/'+prop.wigosid+'">Details</a></td></tr>') ;
 	
 			} else if (filetype=="TEMP") {
 

@@ -11,11 +11,72 @@ from wdqms.decorators import json_response
 from django.http import StreamingHttpResponse
 
 import csv
+import re
+import datetime
 
 def index(request):
     template = loader.get_template('index.html')
     context = {}
     return HttpResponse(template.render(context,request))
+
+
+def station(request,stationid):
+    template = loader.get_template('station.html')
+
+    station = Station.objects.filter(wigosid=stationid).order_by('-created')[0]
+    context = {'station' : station }
+    return HttpResponse(template.render(context,request))
+
+@json_response 
+def nrreceived(request,stationid,variable):
+
+    daysback = int(request.GET.get('daysback',7))
+
+    datefrom = datetime.datetime.strptime(request.GET.get('from','20160101'),'%Y%m%d')
+    dateto = datetime.datetime.strptime(request.GET.get('to',(datetime.datetime.now() - datetime.timedelta(1)).strftime('%Y%m%d')),'%Y%m%d')
+    encoding = request.GET.get('encoding','json')
+    if encoding not in ('csv','json'):
+          raise ValueError('no such encoding')
+
+    station = Station.objects.filter(wigosid=stationid).order_by('-created')[0]
+
+    params = { 'wigosid' : stationid , 'variable' : variable , 'from' : datefrom , 'to' : dateto , 'idx' : station.indexnbr }
+
+    sql = """ select yyyy,mm,dd,center, sum(nr_received) as rec, sum(nr_expected) as exp from stationsbyperiod where indexnbr = %(idx)s 
+		and varid = %(variable)s and assimilationdate between %(from)s and %(to)s  group by center,yyyy,mm,dd order by center,yyyy,mm,dd"""
+
+    with connection.cursor() as cursor:
+       cursor.execute(sql, params )
+
+       data = cursor.fetchall()
+       if not data:
+          raise ValueError('no such station')
+
+       dates = {}
+       for d in data:
+          mydate = "{}".format(datetime.date(d[0],d[1],d[2]))
+          if mydate not in dates:
+             dates[mydate]={}
+          dates[mydate]["{}-rec".format(d[3])] = d[4]
+          dates[mydate]["{}-exp".format(d[3])] = d[5]
+ 
+       if encoding=='json':
+          ret = { 'wigosid' : stationid , 'dates' : dates}
+       if encoding=='csv':
+          data='Day,Expected,ECMWF,JMA,NCEP,DWD\n'
+          for mydate,d in sorted(dates.items()):
+             ecmwf = d["ECMWF-rec"] if "ECMWF-rec" in d else 0
+             dwd = d["DWD-rec"] if "DWD-rec" in d else 0 
+             jma = d["JMA-rec"] if "JMA-rec" in d else 0 
+             ncep = d["NCEP-rec"] if "NCEP-rec" in d else 0 
+             exp = d["JMA-exp"] if "JMA-exp" in d else d["ECMWF-exp"] if "ECMWF-exp" in d else 0
+
+             data = data+'{},{},{},{},{},{}\n'.format(mydate,exp,ecmwf,jma,ncep,dwd)
+
+          ret = { 'data' : data }
+
+       return ret
+
 
 def availability_report(request):
     daysback = int(request.GET.get('daysback',7))
@@ -96,14 +157,20 @@ def listspace(request):
 
     return HttpResponse(template.render(context,request))
     
-
+# this view is used for the station details from the country view
 @json_response
 def data(request):
     stationindexnbr = request.GET.get('indexnbr')
+    wigosid = request.GET.get('wigosid')
     center = request.GET.get('center')
     callback = request.GET.get('callback')
 
-    station = Station.objects.filter(indexnbr=stationindexnbr).order_by('-created')[0]
+    if wigosid:
+    	station = Station.objects.filter(wigosid=wigosid).order_by('-created')[0]
+    elif stationindexnbr:
+    	station = Station.objects.filter(indexnbr=stationindexnbr).order_by('-created')[0]
+    else:
+    	raise ValueError("no indexnbr or wigosid supplied")
 
     stationinfo = { 'stationname' : station.name , 'indexnbr' : station.indexnbr, 'countryarea' : station.area , 'countrycode' : station.code,
 			'latitude' : station.latitude , 'longitude' : station.longitude }
@@ -165,7 +232,7 @@ def country_dt(request):
        raise ValueError("type {} does not exist".format(mytype))
 
     sql = """ select nr_expected, nr_received, nr_rejected, nr_blacklisted, ss.indexnbr, v.stationname, v.isocc, v.indexsubnbr, 
-			ss.yyyy, ss.mm, ss.dd, ss.center from vola v join (
+			ss.yyyy, ss.mm, ss.dd, ss.center, v.wigosid  from volaex v join (
 		select yyyy,mm,dd, invola, vola_id, center, indexnbr, avg(per_used) as per_used , avg(per_received) as per_received,
 			sum(nr_received) as nr_received,
 			sum( CASE WHEN hasduplicate THEN 0 ELSE nr_expected END )  as nr_expected,
@@ -189,10 +256,11 @@ def country_dt(request):
         stationname = row[5]
         isocc = row[6]
         indexsubnbr  = row[7]
+        wigosid  = row[12]
 
         myindex = "{}-{}".format(indexnbr,indexsubnbr)
 
-        station = { 'name' : stationname , 'indexnbr' : myindex , 'nrexp' : nr_ex, 'nrrec' : nr_rec, 'nrrej' : nr_rej , 'nrbla' : nr_bla , 'indexnbr2' : indexnbr }
+        station = { 'name' : stationname , 'wigosid' : wigosid, 'indexnbr' : myindex , 'nrexp' : nr_ex, 'nrrec' : nr_rec, 'nrrej' : nr_rej , 'nrbla' : nr_bla , 'indexnbr2' : indexnbr }
         stations.append(station)
 
 
@@ -227,7 +295,7 @@ def country(request):
 
     countries = Country.objects.all().exclude(vola_code=None)
 
-    yesterday = datetime.now() - timedelta(days=1)
+    yesterday = datetime.datetime.now() - timedelta(days=1)
     tabs = [ "noreport" , "underperf" , "quality" , "normal"]
 
 

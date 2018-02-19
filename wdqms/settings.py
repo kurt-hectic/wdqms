@@ -50,6 +50,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+
 ROOT_URLCONF = 'wdqms.urls'
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 TEMPLATES = [
@@ -63,9 +64,10 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+    		'wdqms.context_processors.global_settings',
             ],
         },
-    },
+     }
 ]
 
 WSGI_APPLICATION = 'wdqms.wsgi.application'
@@ -124,3 +126,4 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+

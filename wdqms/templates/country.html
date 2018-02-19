@@ -514,7 +514,13 @@ function initTables(initial) {
 		$('#stationtable-{{tab}}').DataTable( {
 			"ajax" : ajaxurl,
 			 "columns":  [
-				{ "data": "name" },
+				{
+				"targets": 0,
+				"data": "name",
+					"render": function ( data, type, full, meta ) {
+					  return '<a href="{{ OSCAR_STATION_REPORT }}'+full['wigosid']+'">'+data+'</a>';
+					}
+				},
 				{ "data": "indexnbr" },
 				{ "data": "nrexp" ,
 				  "defaultContent" : "0"
@@ -528,7 +534,6 @@ function initTables(initial) {
 				{ "data": "nrbla",
 				"defaultContent" : "0"
 				}, 
-
 				{
 				"targets": 0,
 				"data": "indexnbr2",

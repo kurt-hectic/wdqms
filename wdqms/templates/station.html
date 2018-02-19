@@ -1,0 +1,302 @@
+{% load static %}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-GB">
+<head>
+<title>WDQMS page {{stationid}}</title>
+	<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+	<meta name="description" content="2 Column CSS Demo - Equal Height Columns with Cross-Browser CSS" />
+	<meta name="keywords" content="2 Column CSS Demo - Equal Height Columns with Cross-Browser CSS" />
+	<meta name="robots" content="index, follow" />
+	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+	<style type="text/css">
+ .mapbox{
+	width:300px;
+	height:300px;
+	margin:30px;
+	margin-top:0px;
+  }
+</style>
+
+	<style media="screen" type="text/css">
+
+  .circle {
+      width: 10px;
+      height: 10px;
+      -webkit-border-radius: 5px;
+      -moz-border-radius: 5px;
+      border-radius: 5px;
+	  display: inline-block;
+	  white-space: nowrap;
+	margin-left:30px;
+	margin-right: 10px;
+	}
+
+	#popup {
+	background-color: #FFF;
+	border-radius: 10px;
+	box-shadow: 0px 0px 25px 5px #999;
+	color: #111;
+	display: none;
+	min-width: 550px;
+	height: 400px;
+	padding:10px;
+  }
+  
+    .button.b-close, .button.bClose {
+    border-radius: 7px;
+    box-shadow: none;
+    font: bold 131% sans-serif;
+    padding: 0px 6px 2px;
+    position: absolute;
+    right: -7px;
+    top: -7px;
+  }
+
+.button > span {
+    font-size: 84%;
+}
+
+.button {
+    background-color: #2B91AF;
+    border-radius: 10px;
+    box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.3);
+    color: #FFF;
+    cursor: pointer;
+    display: inline-block;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+}
+
+
+	/* <!-- */
+body {
+	margin:0;
+	padding:0;
+}
+#header h1,
+#header h2,
+#header p {
+	margin-left:2%;
+	padding-right:2%;
+}
+#active2 #tab2,
+#active3 #tab3,
+#active4 #tab4,
+#active5 #tab5 {
+	font-weight:bold;
+	text-decoration:none;
+	color:#000;
+}
+#footer {
+	clear:both;
+	float:left;
+	width:100%;
+}
+#footer p {
+	margin-left:2%;
+	padding-right:2%;
+}
+
+/* Start of Column CSS */
+#container2 {
+	clear:left;
+	float:left;
+	width:100%;
+	overflow:hidden;
+	/* background:#ffa7a7;  column 2 background colour */
+}
+#container1 {
+	float:left;
+	width:100%;
+	position:relative;
+	right:30%;
+	/* background:#fff689;  column 1 background colour */
+}
+#col1 {
+	float:left;
+	width:66%;
+	position:relative;
+	left:32%;
+	overflow:hidden;
+}
+#col2 {
+	float:left;
+	width:26%;
+	position:relative;
+	left:36%;
+	overflow:hidden;
+}
+/* --> */
+    </style>
+</head>
+<body id="active2">
+
+  <script src="{% static "wdqms/ol3/ol.js" %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static "wdqms/jquery-ui.min.css" %}"/ >
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.12/css/jquery.dataTables.min.css"/ >
+  
+  
+  <script src="{% static "wdqms/jquery-3.1.0.min.js" %}"></script>
+  <script src="{% static "wdqms/jquery-ui.min.js" %}"></script>
+  <script src="{% static "wdqms/jquery.bpopup.min.js" %}"></script>	
+  
+  <script src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/data.js"></script>
+  <script src="https://code.highcharts.com/modules/exporting.js"></script>
+
+<!-- Additional files for the Highslide popup effect -->
+  <script src="https://www.highcharts.com/samples/static/highslide-full.min.js"></script>
+  <script src="https://www.highcharts.com/samples/static/highslide.config.js" charset="utf-8"></script>
+
+<div id="header">
+	<h1>WDQMS page for {{station.name}}  </h1>
+</div>
+<div id="container2">
+	<div id="container1">
+		<div id="col1">
+			<!-- Column one start -->
+			-<div id="popupbody"></div>
+			<!-- Column one end -->
+		</div>
+		<div id="col2">
+			<!-- Column two start -->
+			<div>{{station.name}}</div>
+			<div>{{station.wigosid}}</div>
+			<div><a href="{% url 'nrreceived' station.wigosid 110 %}?encoding=json">Download data</a></div>
+			<!-- Column two end -->
+		</div>
+	</div>
+</div>
+<div id="footer"> <p>c({% now "Y" %}) WMO<P></div>
+
+<script>
+
+var obslayer;
+var map;
+var dateinfo ;
+
+
+
+function loadChart() {
+	
+   $("#popupbody").empty();
+
+	jsonurl = '{% url 'nrreceived' station.wigosid 110 %}?encoding=csv&callback=?' ;
+	
+	console.log(jsonurl);
+  
+	$.getJSON(jsonurl, function (data) {
+
+	console.log(data.data);
+	
+        var chart = $('#popupbody').highcharts({
+			chart : {
+				zoomType: 'x',
+				panning: true,
+				panKey: 'shift'
+			},
+			data: {
+                csv: data.data
+            },
+            title: {
+                text: 'Nr. Received vs Nr. Expected <a href="https://oscar.wmo.int/surface/index.html#/search/station/stationReportDetails/'+ data.wigosid +' target="_blank">@{{station.name}}</a>' ,
+			},
+		  useHTML: true,
+
+			
+			subtitle: {
+				text: 'Zoom by selecting a range. Press shift key to drag.',
+			},
+
+            xAxis: {
+				type: 'datetime',
+                tickInterval: 24 * 3600 * 1000, // one day
+                tickWidth: 0,
+                gridLineWidth: 1,
+                labels: {
+                    align: 'left',
+                    x: 3,
+                    y: 40
+                }
+            },
+
+            yAxis: [{ // left y axis
+                title: {
+                    text: null
+                },
+                labels: {
+                    align: 'left',
+                    x: 3,
+                    y: 16,
+                    format: '{value:.,0f}'
+                },
+                showFirstLabel: false
+            }, ],
+
+            legend: {
+                align: 'left',
+                verticalAlign: 'top',
+                y: 60,
+                floating: true,
+                borderWidth: 0
+            },
+
+            tooltip: {
+                shared: true,
+                crosshairs: true
+            },
+
+            series: [{
+                name: 'Expected',
+		color: "blue",
+		yAxis: 0
+            }, {
+                name: 'ECMWF',
+		color: 'green',
+		yAxis: 0
+            },
+			{
+                name: 'JMA',
+		color: "lawngreen",
+		yAxis: 0
+            },{
+                name: 'NCEP',
+		color: "olive",
+		yAxis: 0
+            }, {
+		name: 'DWD',
+		color: "seagreen",
+		yAxis: 0
+		}
+			]
+        });
+	});
+		
+
+	
+	return false;
+};
+
+
+</script>
+
+
+  <script>
+  $( function() {
+	setTimeout(function(){
+	   window.location.reload(1);
+	}, 12*60*60*1000); //refresh every 12h
+
+	loadChart();
+	
+  } );
+  </script>
+
+<script type="text/javascript">
+</script>
+
+</body>
+</html>
+
