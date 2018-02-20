@@ -201,7 +201,7 @@ function loadChart() {
                 csv: data.data
             },
             title: {
-                text: 'Nr. Received vs Nr. Expected <a href="https://oscar.wmo.int/surface/index.html#/search/station/stationReportDetails/'+ data.wigosid +' target="_blank">@{{station.name}}</a>' ,
+                text: 'Nr. Received vs Nr. Expected <a href="{{OSCAR_STATION_REPORT}}'+ data.wigosid +' target="_blank">@{{station.name}}</a>' ,
 			},
 		  useHTML: true,
 
@@ -211,8 +211,12 @@ function loadChart() {
 			},
 
             xAxis: {
-				type: 'datetime',
-                tickInterval: 24 * 3600 * 1000, // one day
+		type: 'datetime',
+                tickInterval: 30 * 24 * 3600 * 1000, // one week
+		dateTimeLabelFormats: {
+        	    	month: '%b %y',
+        	    	year: '%b %y',
+        	},
                 tickWidth: 0,
                 gridLineWidth: 1,
                 labels: {
