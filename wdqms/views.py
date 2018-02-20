@@ -42,8 +42,19 @@ def nrreceived(request,stationid,variable):
 
     params = { 'wigosid' : stationid , 'variable' : variable , 'from' : datefrom , 'to' : dateto , 'idx' : station.indexnbr }
 
-    sql = """ select yyyy,mm,dd,center, sum(nr_received) as rec, sum(nr_expected) as exp from stationsbyperiod where indexnbr = %(idx)s 
-		and varid = %(variable)s and assimilationdate between %(from)s and %(to)s  group by center,yyyy,mm,dd order by center,yyyy,mm,dd"""
+    sql = """ select s.*,i.nr from 
+	(select yyyy,mm,dd,center, sum(nr_received) as rec, sum(nr_expected) as exp from stationsbyperiod where indexnbr = %(idx)s 
+		and varid = %(variable)s and assimilationdate between %(from)s and %(to)s  group by center,yyyy,mm,dd ) as s
+	join
+	( 
+	select yyyy,mm,dd,center, count(*) as nr from imports 
+	where filetype = 'SYNOP'
+	group by yyyy,mm,dd,center
+	
+	) as i
+	on (s.yyyy=i.yyyy and s.mm=i.mm and s.dd=i.dd and s.center = i.center)
+	where i.nr = 4
+	order by s.center,s.yyyy,s.mm,s.dd """
 
     with connection.cursor() as cursor:
        cursor.execute(sql, params )
@@ -65,11 +76,11 @@ def nrreceived(request,stationid,variable):
        if encoding=='csv':
           data='Day,Expected,ECMWF,JMA,NCEP,DWD\n'
           for mydate,d in sorted(dates.items()):
-             ecmwf = d["ECMWF-rec"] if "ECMWF-rec" in d else 0
-             dwd = d["DWD-rec"] if "DWD-rec" in d else 0 
-             jma = d["JMA-rec"] if "JMA-rec" in d else 0 
-             ncep = d["NCEP-rec"] if "NCEP-rec" in d else 0 
-             exp = d["JMA-exp"] if "JMA-exp" in d else d["ECMWF-exp"] if "ECMWF-exp" in d else 0
+             ecmwf = d["ECMWF-rec"] if "ECMWF-rec" in d else ''
+             dwd = d["DWD-rec"] if "DWD-rec" in d else '' 
+             jma = d["JMA-rec"] if "JMA-rec" in d else '' 
+             ncep = d["NCEP-rec"] if "NCEP-rec" in d else '' 
+             exp = d["JMA-exp"] if "JMA-exp" in d else d["ECMWF-exp"] if "ECMWF-exp" in d else ''
 
              data = data+'{},{},{},{},{},{}\n'.format(mydate,exp,ecmwf,jma,ncep,dwd)
 
@@ -338,7 +349,7 @@ def listimports_json(request):
     return JsonResponse(data)
 
 def listimports(request):
-    now = datetime.now()
+    now = datetime.datetime.now()
     periods = Period.objects.all()
     period_idx = {}
     for p in periods:
