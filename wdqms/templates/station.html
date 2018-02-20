@@ -68,6 +68,13 @@
     text-decoration: none;
 }
 
+.se-pre-con {
+width:64px;
+height:64px;
+background: url({% static "wdqms/3.gif" %}) center no-repeat #fff;
+}
+
+
 
 	/* <!-- */
 body {
@@ -157,7 +164,9 @@ body {
 	<div id="container1">
 		<div id="col1">
 			<!-- Column one start -->
-			-<div id="popupbody"></div>
+			<div id="popupbody">
+  				<div id="spinner"  class="se-pre-con"></div>
+			</div>
 			<!-- Column one end -->
 		</div>
 		<div id="col2">
@@ -181,15 +190,15 @@ var dateinfo ;
 
 function loadChart() {
 	
-   $("#popupbody").empty();
 
 	jsonurl = '{% url 'nrreceived' station.wigosid 110 %}?encoding=csv&callback=?' ;
 	
-	console.log(jsonurl);
+	//console.log(jsonurl);
   
 	$.getJSON(jsonurl, function (data) {
+   		$("#popupbody").empty();
 
-	console.log(data.data);
+	//console.log(data.data);
 	
         var chart = $('#popupbody').highcharts({
 			chart : {
@@ -201,7 +210,7 @@ function loadChart() {
                 csv: data.data
             },
             title: {
-                text: 'Nr. Received vs Nr. Expected <a href="{{OSCAR_STATION_REPORT}}'+ data.wigosid +' target="_blank">@{{station.name}}</a>' ,
+                text: 'Nr. Received vs Nr. Expected for Surface Pressure at <a href="{{OSCAR_STATION_REPORT}}'+ data.wigosid +' target="_blank">@{{station.name}}</a>' ,
 			},
 		  useHTML: true,
 
