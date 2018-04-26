@@ -19,6 +19,17 @@ def index(request):
     context = {}
     return HttpResponse(template.render(context,request))
 
+def dashboard(request,country):
+
+    country = Country.objects.filter(name__icontains=country)[0]
+
+    if not country:
+       raise ValueError("country not enabled")
+
+    stations = Station.objects.filter(code=country.vola_code)
+    template = loader.get_template('dashboard.html')
+    context = {'country' : country , 'stations' : stations }
+    return HttpResponse(template.render(context,request))
 
 def station(request,stationid):
     template = loader.get_template('station.html')
@@ -28,6 +39,33 @@ def station(request,stationid):
     return HttpResponse(template.render(context,request))
 
 @json_response 
+def countryaggregate(request,countrycode):
+
+    datefrom = datetime.datetime.strptime(request.GET.get('from','20160101'),'%Y%m%d')
+    dateto = datetime.datetime.strptime(request.GET.get('to',(datetime.datetime.now() - datetime.timedelta(1)).strftime('%Y%m%d')),'%Y%m%d')
+    center = request.GET.get('center','ECMWF')
+    if center not in ["ECMWF","JMA","DWD","NCEP"]:
+      raise ValueError("unsupported argument")
+
+    sql = """ select to_char(make_timestamp(yyyy , mm , dd , hourperiod , 0 ,0 ), 'YYYY-MM-DD HH24:00:00') as date , isocc,  sum(isempty::integer ) as empty, 
+		sum( (not isempty)::integer ) as notempty  from stationsbyperiodex 
+		where  isocc = %(countrycode)s and assimilationdate between %(from)s and %(to)s and center = %(center)s
+		group by isocc,yyyy,mm,dd,hourperiod
+		order by isocc, date
+    """
+    with connection.cursor() as cursor:
+       params = { 'from' : datefrom , 'to' : dateto , 'countrycode' : countrycode , 'center' : center}
+       cursor.execute(sql, params )
+
+       data = cursor.fetchall()
+       if not data:
+          raise ValueError('no such station')
+
+       return { 'data' : data }
+
+
+
+@json_response 
 def nrreceived(request,stationid,variable):
 
     daysback = int(request.GET.get('daysback',7))
@@ -35,14 +73,19 @@ def nrreceived(request,stationid,variable):
     datefrom = datetime.datetime.strptime(request.GET.get('from','20160101'),'%Y%m%d')
     dateto = datetime.datetime.strptime(request.GET.get('to',(datetime.datetime.now() - datetime.timedelta(1)).strftime('%Y%m%d')),'%Y%m%d')
     encoding = request.GET.get('encoding','json')
+    sampling = request.GET.get('sampling','day')
     if encoding not in ('csv','json'):
           raise ValueError('no such encoding')
+    if sampling not in ('month','day'):
+          raise ValueError('no such sampling')
 
     station = Station.objects.filter(wigosid=stationid).order_by('-created')[0]
 
     params = { 'wigosid' : stationid , 'variable' : variable , 'from' : datefrom , 'to' : dateto , 'idx' : station.indexnbr }
 
-    sql = """ select s.*,i.nr from 
+    if sampling == 'day':
+
+       sql = """ select s.*,i.nr from 
 	(select yyyy,mm,dd,center, sum(nr_received) as rec, sum(nr_expected) as exp from stationsbyperiod where indexnbr = %(idx)s 
 		and varid = %(variable)s and assimilationdate between %(from)s and %(to)s  group by center,yyyy,mm,dd ) as s
 	join
@@ -55,6 +98,24 @@ def nrreceived(request,stationid,variable):
 	on (s.yyyy=i.yyyy and s.mm=i.mm and s.dd=i.dd and s.center = i.center)
 	where i.nr = 4
 	order by s.center,s.yyyy,s.mm,s.dd """
+
+    if sampling == 'month':
+       sql = """ 
+
+ select s.yyyy,s.mm,1 as dd,s.center,avg(rec) as rec ,avg(exp) as exp ,avg(i.nr) as nr from
+(select yyyy,mm,dd,center, sum(nr_received) as rec, sum(nr_expected) as exp from stationsbyperiod where indexnbr = %(idx)s
+ and varid = %(variable)s and assimilationdate between %(from)s and %(to)s  group by center,yyyy,mm,dd ) as s
+join
+(
+select yyyy,mm,dd,center, count(*) as nr from imports
+where filetype = 'SYNOP'
+group by yyyy,mm,dd,center
+having count(*) = 4
+) as i
+on (s.yyyy=i.yyyy and s.mm=i.mm and s.dd=i.dd and s.center = i.center)
+group by s.center,s.yyyy,s.mm
+order by s.center,s.yyyy,s.mm
+"""
 
     with connection.cursor() as cursor:
        cursor.execute(sql, params )
@@ -85,8 +146,6 @@ def nrreceived(request,stationid,variable):
              data = data+'{},{},{},{},{},{}\n'.format(mydate,exp,ecmwf,jma,ncep,dwd)
 
           ret = { 'data' : data }
-
-       return ret
 
 
 def availability_report(request):

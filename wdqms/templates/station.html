@@ -189,17 +189,12 @@ var dateinfo ;
 
 
 function loadChart() {
-	
-
 	jsonurl = '{% url 'nrreceived' station.wigosid 110 %}?encoding=csv&callback=?' ;
-	
 	//console.log(jsonurl);
   
 	$.getJSON(jsonurl, function (data) {
    		$("#popupbody").empty();
 
-	//console.log(data.data);
-	
         var chart = $('#popupbody').highcharts({
 			chart : {
 				zoomType: 'x',
@@ -213,12 +208,10 @@ function loadChart() {
                 text: 'Nr. Received vs Nr. Expected for Surface Pressure at <a href="{{OSCAR_STATION_REPORT}}'+ data.wigosid +' target="_blank">@{{station.name}}</a>' ,
 			},
 		  useHTML: true,
-
 			
 			subtitle: {
 				text: 'Zoom by selecting a range. Press shift key to drag.',
 			},
-
             xAxis: {
 		type: 'datetime',
                 tickInterval: 30 * 24 * 3600 * 1000, // one week
@@ -234,7 +227,6 @@ function loadChart() {
                     y: 40
                 }
             },
-
             yAxis: [{ // left y axis
                 title: {
                     text: null
@@ -247,7 +239,6 @@ function loadChart() {
                 },
                 showFirstLabel: false
             }, ],
-
             legend: {
                 align: 'left',
                 verticalAlign: 'top',
@@ -255,7 +246,6 @@ function loadChart() {
                 floating: true,
                 borderWidth: 0
             },
-
             tooltip: {
                 shared: true,
                 crosshairs: true
