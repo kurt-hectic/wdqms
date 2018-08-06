@@ -1,0 +1,38 @@
+{% load static %}
+<html>
+<head>
+<title>{% block title%}WIGOS Data Quality Monitoring System{% endblock title %}</title>
+<link href="{% static "wdqms/obsmon.css" %}"  rel="stylesheet">
+<link href="{% static "wdqms/fonts.css" %}"  rel="stylesheet">
+
+{% block style %}{% endblock style %}
+
+</head>
+
+<body>
+
+{% block scripts %}{% endblock scripts %}
+
+<div><div id="header"><span id="titlecenter">WIGOS Data Quality Monitoring System<span></div>
+<div id="menuemain">
+  <div id="menue" style="">
+<ul>
+<li> <a {% if active == 'home' %} class="active"  {% endif %} href="{% url 'index' %}">Home</a></li>
+<li> <a {% if active == 'stations' %} class="active"  {% endif %} href="{% url 'map' %}">Stations</a></li>
+<li> <a {% if active == 'avsb' %} class="active"  {% endif %} href="{% url 'avsbmap' %}">A vs. B</a></li>
+<li> <a {% if active == 'country' %} class="active"  {% endif %} href="{% url 'country' %}">Country</a></li>
+<li> <a {% if active == 'dashboard' %} class="active"  {% endif %} href="{% url 'dashboard' %}">Dashboard</a></li>
+</ul>
+
+</div>
+</div>
+<div id="body" style="margin:16px;">
+
+{% block body %}{% endblock body %}
+
+</div>
+
+</body>
+
+</html>
+

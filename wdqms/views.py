@@ -1,3 +1,4 @@
+from django.http import Http404
 from django.http import HttpResponse
 from django.template import loader
 from django.shortcuts import render
@@ -9,26 +10,30 @@ from datetime import date,timedelta,datetime
 from django.db import connection, transaction
 from wdqms.decorators import json_response
 from django.http import StreamingHttpResponse
+from django.shortcuts import redirect
+
 
 import csv
 import re
 import datetime
+import os
 
 def index(request):
     template = loader.get_template('index.html')
-    context = {}
+    context = {'active':'home'}
     return HttpResponse(template.render(context,request))
 
-def dashboard(request,country):
+def dashboard(request,country='Niger'):
 
     country = Country.objects.filter(name__icontains=country)[0]
+    countries = Country.objects.all().exclude(vola_code=None)
 
     if not country:
        raise ValueError("country not enabled")
 
     stations = Station.objects.filter(code=country.vola_code)
     template = loader.get_template('dashboard.html')
-    context = {'country' : country , 'stations' : stations }
+    context = {'country' : country , 'stations' : stations ,'active' : 'dashboard' , 'countries' : countries }
     return HttpResponse(template.render(context,request))
 
 def station(request,stationid):
@@ -49,7 +54,7 @@ def countryaggregate(request,countrycode):
 
     sql = """ select to_char(make_timestamp(yyyy , mm , dd , hourperiod , 0 ,0 ), 'YYYY-MM-DD HH24:00:00') as date , isocc,  sum(isempty::integer ) as empty, 
 		sum( (not isempty)::integer ) as notempty  from stationsbyperiodex 
-		where  isocc = %(countrycode)s and assimilationdate between %(from)s and %(to)s and center = %(center)s
+		where  isocc = %(countrycode)s and assimilationdate between %(from)s and %(to)s and center = %(center)s and varid = 110
 		group by isocc,yyyy,mm,dd,hourperiod
 		order by isocc, date
     """
@@ -61,7 +66,7 @@ def countryaggregate(request,countrycode):
        if not data:
           raise ValueError('no such station')
 
-       return { 'data' : data }
+       return { 'data' : data , 'disclaimer' : "monitoring data from {}, WDQMS in pre-operational mode".format(center) }
 
 
 
@@ -131,6 +136,7 @@ order by s.center,s.yyyy,s.mm
              dates[mydate]={}
           dates[mydate]["{}-rec".format(d[3])] = d[4]
           dates[mydate]["{}-exp".format(d[3])] = d[5]
+
  
        if encoding=='json':
           ret = { 'wigosid' : stationid , 'dates' : dates}
@@ -147,15 +153,54 @@ order by s.center,s.yyyy,s.mm
 
           ret = { 'data' : data }
 
+       return ret
+
+def download_file(request):
+    date = datetime.datetime.strptime(request.GET.get('date'),'%Y%m%d')
+    period = int(request.GET.get('period'))
+    center = request.GET.get('center','ECMWF')
+    filetype = request.GET.get('filetype','SYNOP')
+
+    if period not in [0,6,12,18] or center not in ['ECMWF','JMA','DWD','NCEP'] or filetype not in ["SYNOP","TEMP"]:
+       raise ValueError("argument error")
+
+    params = { 'period' : period , 'date' : date.strftime("%Y%m%d"), 'dateym' : date.strftime("%Y%m") , 'center' : center , 'filetype' : filetype }
+
+    if center == 'ECMWF':
+       path = "/mnt/storage/wdqms/rawfiles/dissemination.ecmwf.int/ECMF/{filetype}/{period:02d}/ECMF_{filetype}_{date}_{period:02d}.csv".format(**params)
+    elif center == 'JMA':
+       path = "/mnt/storage/wdqms/rawfiles/qc.kishou.go.jp/WIGOS_QM/{dateym}/JMA_{filetype}_{date}_{period:02d}.csv".format(**params)
+    elif center == 'DWD':
+       path = "/mnt/storage/wdqms/rawfiles/DWD/{filetype}/{period:02d}/DWD_{filetype}_{date}_{period:02d}.csv".format(**params)
+    elif center == 'NCEP':
+       path = "/mnt/storage/wdqms/rawfiles/www.emc.ncep.noaa.gov/mmab/WIGOS/ncepdemo_{date}_t{period:02d}z.csv".format(**params)
+
+    file_path = os.path.join(path)
+    if not os.path.exists(file_path):
+       file_path = file_path + ".gz"
+
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as fh:
+            response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
+            response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+            return response
+    raise Http404("<h1>{} not found, perhaps it is already archived</h1>".format(path))
+
 
 def availability_report(request):
+
     daysback = int(request.GET.get('daysback',7))
+    month = int(request.GET.get('month', None  ))
     mode = request.GET.get('mode','wdqms')
 
     dateselects = []
-    for i in range(daysback):
-         d = date.today() - timedelta(days=i)
-         dateselects.append( "( yyyy={} and mm={} and dd={}   )".format( d.year, d.month , d.day  )  )
+    if month:
+        month = datetime.datetime.strptime("{}01".format(month),"%Y%m%d")
+        dateselects.append( "(yyyy={} and mm={})".format( month.year, month.month  ))
+    else:
+        for i in range(daysback):
+           d = date.today() - timedelta(days=i)
+           dateselects.append( "( yyyy={} and mm={} and dd={}   )".format( d.year, d.month , d.day  )  )
 
     wheresqlstring = " or ".join(dateselects)
 
@@ -370,7 +415,7 @@ def country(request):
 
 
     template = loader.get_template('country.html')
-    context = {'country':country, 'countries' : countries, 'yesterday':yesterday , 'tabs' : tabs}
+    context = {'country':country, 'countries' : countries, 'yesterday':yesterday , 'tabs' : tabs , 'active' : 'country'}
     return HttpResponse(template.render(context,request))
 
 
@@ -379,19 +424,31 @@ def map(request):
     if style not in ['wdqmsmap','wdqmsmaplpr']:
       raise ValueError("{} not supported".format(style))
     template = loader.get_template('map.html')
-    context = {'style':style}
+    context = {'style':style, 'active' : 'stations'}
+
+    return HttpResponse(template.render(context,request))
+
+def maxmap(request):
+    return redirect('/map/')
+
+def avsbmap(request):
+    template = loader.get_template('avsbmap.html')
+    context = {'active':'avsb'}
 
     return HttpResponse(template.render(context,request))
 
 def listimports_json(request):
 
     mytype = request.GET.get('type','')
-    center = request.GET.get('center','')
+    center = request.GET.get('center','ALL')
 
-    if mytype not in ["SYNOP","TEMP"] or center not in ["ECMWF","JMA","DWD","NCEP"]:
+    if mytype not in ["SYNOP","TEMP"] or center not in ["ECMWF","JMA","DWD","NCEP","ALL"]:
       raise ValueError("unsupported argument")
 
-    periods = Period.objects.filter(center=center,filetype=mytype)
+    if center == 'ALL':
+       periods = Period.objects.filter(filetype=mytype)
+    else:
+       periods = Period.objects.filter(center=center,filetype=mytype)
     mindate = periods.first().to_date().strftime("%Y/%m/%d")
     maxdate = periods.last().to_date().strftime("%Y/%m/%d")
 
@@ -399,7 +456,9 @@ def listimports_json(request):
     for period in periods:
        key = period.to_date().strftime("%Y/%m/%d")
        if key in dates:
-         dates[key].append(str(period.hour))
+         val = str(period.hour)
+         if val not in dates[key]:
+            dates[key].append(val)
        else:
          dates[key] = [str(period.hour),]
 
@@ -426,7 +485,7 @@ def listimports(request):
 
     template = loader.get_template('listimports.html')
     context = {'now': now , 'periods' : period_idx , 'dates' : list(reversed(dates)), 
-	'centers' : centers , 'tempcenters' : tempcenters , 'nwpperiods' : range(0,24,6), 'tempstartdate' : date(2017,1,1) }
+	'centers' : centers , 'tempcenters' : tempcenters , 'nwpperiods' : range(0,24,6), 'tempstartdate' : date(2017,1,1) , 'active' : 'imports'}
 
     return HttpResponse(template.render(context,request))
     

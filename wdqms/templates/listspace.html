@@ -1,18 +1,16 @@
-<html>
+{% extends "wdqms-template.html" %}
 
-<head>
+{% block title %} WDQMS - disk space {% endblock title %}
 
+{% block style %}
 <style>
 td { padding-right:10px; }
 td.empty { background-color:red; }
 td.imported { background-color:green; }
-
 </style>
+{% endblock style %}
 
-</head>
-
-<body>
-
+{% block body %}
 <h1> WDQMS table utilisation </h1>
 <p>As per {% now "DATETIME_FORMAT" %} <a href="" id="reload">reload</a></p>
 
@@ -123,4 +121,4 @@ $(function () {
 
 </script>
 
-</html>
+{% endblock body %}

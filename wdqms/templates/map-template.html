@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+  <head>
+  <title>{% block title %} WIGOS Data Quality Monitoring System {% endblock title %} </title>
+  <meta charset="utf-8">
+  <link href="{% static  "wdqms/ol3/ol.css" %}" rel="stylesheet">
+  <link href="{% static "wdqms/obsmon.css" %}"  rel="stylesheet">
+  <link href="{% static "wdqms/jquery-ui.min.css" %}"  rel="stylesheet">
+  <link href="{% static "wdqms/fonts.css" %}"  rel="stylesheet">
+  <link href="{% static "wdqms/map.css" %}"  rel="stylesheet">
+
+  </head>
+  <body>
+
+  <div id="wrapper">
+	  <div id="first">
+		<div  id="map"></div>
+		{% block maplegend %} {% endblock maplegend %}
+	  </div>
+	  <div id="menue">
+		<ul>
+		  <li><a {% if active == 'home' %} class="active"  {% endif %} href="{% url 'index' %}">Home</a></li>
+		  <li><a {% if active == 'stations' %} class="active"  {% endif %} href="{% url 'map' %}">Stations</a></li>
+		  <li><a {% if active == 'avsb' %} class="active"  {% endif %} href="{% url 'avsbmap' %}">A vs. B</a></li>
+		  <li><a {% if active == 'country' %} class="active"  {% endif %} href="{% url 'country' %}">Country</a></li> 
+		  <li><a {% if active == 'dashboard' %} class="active"  {% endif %} href="{% url 'dashboard' %}">Dashboard</a></li> 
+		</ul>
+	  <div id="second"  >
+	  {% block rightcol %}
+	  {% endblock rightcol %}
+	  </div>
+	  </div>
+<div >
+
+
+</div>
+  <script src="{% static "wdqms/ol3/ol.js" %}"></script>
+  <script src="{% static "wdqms/jquery-3.1.0.min.js" %}"></script>
+  <script src="{% static "wdqms/jquery.bpopup.min.js" %}"></script>	
+  <script src="{% static "wdqms/jquery-ui.min.js" %}"></script>	
+
+{% block scripts %}
+{% endblock scripts %}
+
+
+{% block updatemap %}
+{% endblock updatemap %}
+
+{% block calendar %}
+{% endblock calendar %}
+
+  
+
+{% block maplayers %}
+{% endblock maplayers %}
+
+
+{% block mapinteraction %}
+{% endblock mapinteraction %}
+
+
+<div id="spinner"  class="se-pre-con"></div>
+
+{% block popups  %}
+{% endblock popups  %}
+
+	
+
+ </body>
+</html>

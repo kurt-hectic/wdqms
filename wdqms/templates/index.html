@@ -1,24 +1,17 @@
-<html>
-<head>
-<title>WDQMS landing page</title>
-</head>
+{% extends "wdqms-template.html" %}
+{% block title %}WIGOS Data Quality Monitoring System - Landing Page{% endblock title %}
 
-<body>
+{% block body %}
 <h1>Welcome to the WDQMS landing page</h1>
 
-<p> You can find some interesting links here</p>
+<p>The following information is currently available in the tool:</p>
 
 <ul>
 <li>Overview of <a href="listimports">imported information</a> in the tool </li>
-<li>Map showing <a href="map">data availability </a> by station </li>
+<li>Map showing <a href="map">data availability</a> by station </li>
+<li>Map showing <a href="avsbmap">difference between NWP centers</a> by station </li>
 <li>Monitoring <a href="country?cc=UGA">by country</a> (for selected countries) </li>
 <li>Disk size <a href="listspace">of WDQMS server</a></li>
-
-
-
 </ul>
 
-</body>
-
-</html>
-
+{% endblock body %}

@@ -1,79 +1,11 @@
-<!DOCTYPE html>
-{% load static %}
-<html>
-  <head>
-  <title>WIGOS Data Quality Monitoring System</title>
-  <meta charset="utf-8">
-  <link href="{% static  "wdqms/ol3/ol.css" %}" rel="stylesheet">
-  <link href="{% static "wdqms/obsmon.css" %}"  rel="stylesheet">
-  <link href="{% static "wdqms/jquery-ui.min.css" %}"  rel="stylesheet">
+{% extends "map-template.html" %}
 
-  <style>
-  #map {
-    width: 950px;
-    height: 600px;
-  }
+{% block title %} WDQMS - SYNOP and UA map   {% endblock title %}
 
-  #popup,#popuptemp {
-	background-color: #FFF;
-	border-radius: 10px;
-	box-shadow: 0px 0px 25px 5px #999;
-	color: #111;
-	display: none;
-	min-width: 450px;
-	padding: 25px;
-  }
-
-  .button.b-close, .button.bClose {
-    border-radius: 7px;
-    box-shadow: none;
-    font: bold 131% sans-serif;
-    padding: 0px 6px 2px;
-    position: absolute;
-    right: -7px;
-    top: -7px;
-  }
-
-.button > span {
-    font-size: 84%;
-}
-
-.button {
-    background-color: #2B91AF;
-    border-radius: 10px;
-    box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.3);
-    color: #FFF;
-    cursor: pointer;
-    display: inline-block;
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-}
-
-.no-js #loader { display: none;  }
-.js #loader { display: block; position: absolute; left: 100px; top: 0; }
-.se-pre-con {
-	position: absolute;
-	left: 500px;
-	top: 300px;
-	width:64px;
-	height:64px;
-	background: url({% static "wdqms/3.gif" %}) center no-repeat #fff;
-}
-
-
-  </style>
-  </head>
-  <body>
-
-  <div id="wrapper">
-	  <div id="first">
-		<div  id="map"></div>
-	  </div>
-	  <div id="second" style="padding:40px;" >
+{% block rightcol %}
 		<h1>NWP monitoring pilot project</h2>		
 	
-			<div>
+		<div>
 			<select class="mycontrol" id="filetype">
 				<option value="SYNOP" >SYNOP (surface pressure)</option>
 				<option value="TEMP" selected="selected">TEMP</option>
@@ -84,6 +16,7 @@
 				<option selected="selected">JMA</option>
 				<option>DWD</option>
 				<option>NCEP</option>
+				<option>ALL</option>
 			</select>
 			<label>select center</label>
 			<input type="text" id="datepicker" ></input>
@@ -124,20 +57,178 @@
 			<div style="color:#FF00BF">not in VolA </div>
 			</div>
 
-	</div>
+		</div>
 
-  </div>
-<div >
+{% endblock rightcol %}
 
 
-</div>
-  <script src="{% static "wdqms/ol3/ol.js" %}"></script>
-  <script src="{% static "wdqms/jquery-3.1.0.min.js" %}"></script>
-  <script src="{% static "wdqms/jquery.bpopup.min.js" %}"></script>	
-  <script src="{% static "wdqms/jquery-ui.min.js" %}"></script>	
+{% block popups %}
 
-  <script>
+    <div style="display:none;" id="popup"><span class="button b-close"><span>X</span></span>
+	<table id="popuptable">
+		<thead>
+		<tr>
+		<th>IndexNr</th>
+		<th>Name</th>
+		<th>Center</th>
+		<th>Nr received</th>
+		<th>Nr expected</th>
+		</tr>
+		</thead>	
+		<tbody id="popuptablebody">
+		</tbody>
+	</table> 
+    </div>
+	
+	
+    <div style="display:none;" id="popuptemp"><span class="button b-close"><span>X</span></span>
+	<table id="popuptabletemp">
+		<thead>
+		<tr>
+		<th>IndexNr</th>
+		<th>Name</th>
+		<th>Center</th>
+		<th>Status</th>
+		<th>Nr UA temp (trop) </th>
+		<th>Nr UA temp (stra) </th>
+		<th>Nr UA humidity (trop) </th>
+		<th>Nr UA humidity (stra) </th>
+		<th>Nr UA zonal wind (trop) </th>
+		<th>Nr UA zonal wind (stra) </th>
+		<th>Nr UA merio wind (trop) </th>
+		<th>Nr UA merio wind (stra) </th>
+		</tr>
+		</thead>	
+		<tbody id="popuptablebodytemp">
+		</tbody>
+	</table> 
+    </div>
+	
 
+{% endblock popups %}
+
+{% block maplayers %}
+
+<script type="text/javascript">
+
+var sondelayer =  new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          params: {'FORMAT': 'image/png',
+                   'VERSION': '1.1.1',  
+                LAYERS: 'wdqms:radiosondes',
+                STYLES: 'radiosondesstyle',
+		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
+          }, 
+	  imageLoadFunction: function(image, src) {
+		var imageElement = image.getImage();
+		imageElement.onload = function() {
+			$("#spinner").hide();
+		};
+		imageElement.src = src;
+	 },
+        }),
+	visible: false,
+      }) ;
+
+var sondelayer_max =  new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          params: {'FORMAT': 'image/png',
+                   'VERSION': '1.1.1',  
+                LAYERS: 'wdqms:radiosondes_max',
+                STYLES: 'radiosondesstyle',
+		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
+          }, 
+	  imageLoadFunction: function(image, src) {
+		var imageElement = image.getImage();
+		imageElement.onload = function() {
+			$("#spinner").hide();
+		};
+		imageElement.src = src;
+	 },
+        }),
+	visible: false,
+      }) ;
+var obslayer =  new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          params: {'FORMAT': 'image/png',
+                   'VERSION': '1.1.1',  
+                LAYERS: 'wdqms:percentreceived',
+                STYLES: '{{style}}',
+		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
+          }, 
+	  imageLoadFunction: function(image, src) {
+		var imageElement = image.getImage();
+		imageElement.onload = function() {
+			$("#spinner").hide();
+		};
+		imageElement.src = src;
+			
+	 },
+		  
+		  
+        }),
+	visible: false,
+      }) ;
+
+var obslayer_max =  new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          params: {'FORMAT': 'image/png',
+                   'VERSION': '1.1.1',  
+                LAYERS: 'wdqms:percentreceived_max',
+                STYLES: '{{style}}',
+		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
+          }, 
+	  imageLoadFunction: function(image, src) {
+		var imageElement = image.getImage();
+		imageElement.onload = function() {
+			$("#spinner").hide();
+		};
+		imageElement.src = src;
+			
+	 },
+		  
+		  
+        }),
+	visible: false,
+      }) ;
+var map = new ol.Map({
+    target: 'map',
+    layers: [
+new ol.layer.Tile({
+      source: new ol.source.XYZ({
+        url: 'https://api.mapbox.com/styles/v1/kurt-hectic/cj488lfn91qxh2rrz0nghg0y3/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoia3VydC1oZWN0aWMiLCJhIjoiY2loNGtsNzc0MHpvdHgxbTBxejQzOGVpZiJ9.NiOdnMqDcZKeR6Oxo7tWmw'
+      })
+    }),
+	obslayer,	
+	obslayer_max,	
+	sondelayer,	
+	sondelayer_max,	
+    ],
+    view: new ol.View({
+      center: [-13657275.569447909, 5699392.057118396],
+      zoom: 2
+    }),
+    controls: ol.control.defaults({
+      attributionOptions: {
+        collapsible: false
+      }
+    })
+  });
+</script>
+{% endblock maplayers %}
+
+
+
+{% block updatemap %}
+<script type="text/javascript">
 
 function updateMapLayer() {
 			
@@ -153,22 +244,34 @@ function updateMapLayer() {
 	center = $("#nwpcenter").val();
 	filetype = $("#filetype").val();
 
-	if (filetype == "SYNOP") {
-		activelayer = obslayer;
-		inactivelayer = sondelayer;
-	} else if (filetype == "TEMP") {
-		activelayer = sondelayer;
-		inactivelayer = obslayer;
+	obslayer_max.setVisible(false);
+	obslayer.setVisible(false);
+	sondelayer.setVisible(false);
+	sondelayer_max.setVisible(false);
+
+	if (center == "ALL") {
+		if (filetype == "SYNOP") {
+			activelayer = obslayer_max;
+		} else if (filetype == "TEMP") {
+			activelayer = sondelayer_max;
+		}
 	}
+	else {
+		if (filetype == "SYNOP") {
+			activelayer = obslayer;
+		} else if (filetype == "TEMP") {
+			activelayer = sondelayer;
+		}
+	}
+
 
 	viewparam = 'year:' + year + ";month:"+month+";day:"+day+";hourperiod:"+synoptichour+";center:"+center ;
 
-	console.log(viewparam);
+	//console.log(viewparam);
 		
 	params = activelayer.getSource().getParams();
 	params.VIEWPARAMS = viewparam;
 	activelayer.setVisible(true);
-	inactivelayer.setVisible(false);
 		
 	activelayer.getSource().changed();
 	$("#spinner").show();
@@ -176,8 +279,16 @@ function updateMapLayer() {
 	activelayer.getSource().setAttributions([new ol.Attribution({
       		html: center + ":" + year + "/" + month + "/" + day + " " + synoptichour  + ":00-" + (synoptichour + 5) + ":59"
     	})]);
-	console.log("done..");
+	//console.log("done..");
 }
+
+</script>
+{% endblock updatemap %}
+
+
+{% block calendar %}
+
+<script type="text/javascript">
 
 var dateinfo;
 
@@ -191,7 +302,7 @@ function initCalendar() {
 
 	$.getJSON( "./listimports-json", paramdata,  function( data ) {
 
-		console.log(data);
+		//console.log(data);
 
 		dateinfo = data ;
 
@@ -206,7 +317,7 @@ function initCalendar() {
 	        		//var string = jQuery.datepicker.formatDate('yy/mm/dd', date);
 				$("input[name='hourpicker']").prop('disabled','disabled');
 
-				console.log(dateinfo.dates[date]);
+				//console.log(dateinfo.dates[date]);
 				activehours = dateinfo.dates[date];
 				for (var i=0 ; i < activehours.length ; i++ ) {
 					$("input[name='hourpicker'][value='" + parseInt(activehours[i]) + "']").prop('disabled',false);
@@ -252,76 +363,12 @@ $('#filetype').on('change', function() {
    
 </script>
 
-  
-  <script type="text/javascript">
+{% endblock calendar %}
 
-var sondelayer =  new ol.layer.Image({
-        source: new ol.source.ImageWMS({
-          ratio: 1,
-          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
-          params: {'FORMAT': 'image/png',
-                   'VERSION': '1.1.1',  
-                LAYERS: 'wdqms:radiosondes',
-                STYLES: 'radiosondesstyle',
-		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
-          }, 
-	  imageLoadFunction: function(image, src) {
-		var imageElement = image.getImage();
-		imageElement.onload = function() {
-			$("#spinner").hide();
-		};
-		imageElement.src = src;
-	 },
-        }),
-	visible: false,
-      }) ;
 
-var obslayer =  new ol.layer.Image({
-        source: new ol.source.ImageWMS({
-          ratio: 1,
-          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
-          params: {'FORMAT': 'image/png',
-                   'VERSION': '1.1.1',  
-                LAYERS: 'wdqms:percentreceived',
-                STYLES: '{{style}}',
-		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
-          }, 
-	  imageLoadFunction: function(image, src) {
-		var imageElement = image.getImage();
-		imageElement.onload = function() {
-			$("#spinner").hide();
-		};
-		imageElement.src = src;
-			
-	 },
-		  
-		  
-        }),
-	visible: false,
-      }) ;
+{% block mapinteraction %}
 
-var map = new ol.Map({
-    target: 'map',
-    layers: [
-new ol.layer.Tile({
-      source: new ol.source.XYZ({
-        url: 'https://api.mapbox.com/styles/v1/kurt-hectic/cj488lfn91qxh2rrz0nghg0y3/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoia3VydC1oZWN0aWMiLCJhIjoiY2loNGtsNzc0MHpvdHgxbTBxejQzOGVpZiJ9.NiOdnMqDcZKeR6Oxo7tWmw'
-      })
-    }),
-	obslayer,	
-	sondelayer,	
-    ],
-    view: new ol.View({
-      center: [-13657275.569447909, 5699392.057118396],
-      zoom: 2
-    }),
-    controls: ol.control.defaults({
-      attributionOptions: {
-        collapsible: false
-      }
-    })
-  });
-
+<script type="text/javascript">
 
 function onMoveEnd(evt) {
 	$("#spinner").show();
@@ -336,27 +383,41 @@ map.on('singleclick', function(evt) {
 	filetype = $("#filetype").val();
 
 	if (filetype == "SYNOP") {
-		//url=url.replace(/wdqms%3Apercentreceived/g,'wdqms:percentreceivedex');
 		var popupid = "#popup";
-		var source = obslayer.getSource();	
+		if ( center == 'ALL') {
+			var source = obslayer_max.getSource();	
+		} else {
+			var source = obslayer.getSource();	
+		}
 		var url = source.getGetFeatureInfoUrl(
 	  		evt.coordinate, viewResolution, view.getProjection(), {'INFO_FORMAT': 'application/json', 'FEATURE_COUNT': 50});
+		//console.log(url);
 		url=url.replace(/wdqms%3Apercentreceived/g,'wdqms:percentreceivedex');
+		//console.log(url);
 	} else if (filetype == "TEMP") { // nothing for the moment
 		var popupid = "#popuptemp";
-		var source = sondelayer.getSource();	
+		if ( center == 'ALL' ) 
+		{ 
+			var source = sondelayer_max.getSource();	
+		} 
+		else { 
+			var source = sondelayer.getSource();	
+		}
 		var url = source.getGetFeatureInfoUrl(
 	  		evt.coordinate, viewResolution, view.getProjection(), {'INFO_FORMAT': 'application/json', 'FEATURE_COUNT': 50});
+		if ( center == 'ALL' ) {
+			url=url.replace(/wdqms%3Aradiosondes_max/g,'wdqms:radiosondesex_max');
+		}
 	}
 
 	if (url) {
 		$.getJSON( url , function( data ) {
-		console.log(data);
 		  
 		$("#popuptablebody").empty();
 		$("#popuptablebodytemp").empty();
 	  
 		  $.each( data.features, function( idx ) {
+			//console.log(idx);
 			prop = data.features[idx].properties;
 			if (filetype == "SYNOP") {
 			    {% if style == "wdqmsmap"  %}
@@ -397,7 +458,7 @@ map.on('singleclick', function(evt) {
 					color="#ffff00";
 				}
 			     {% endif  %}
-				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td><td><a href="{% url 'station'  %}'+prop.wigosid+'">Details</a></td></tr>') ;
+				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.center+'</td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td><td><a href="{% url 'station'  %}'+prop.wigosid+'">Details</a></td></tr>') ;
 	
 			} else if (filetype=="TEMP") {
 
@@ -409,7 +470,7 @@ map.on('singleclick', function(evt) {
 					tmpstr = tmpstr + "<td>" + prop[myprops[i]] + "</td>";
 				}
 
-				$("#popuptablebodytemp").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.sondestatus+'</td>'+tmpstr+'</tr>') ;
+				$("#popuptablebodytemp").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.center+'</td><td>'+prop.sondestatus+'</td>'+tmpstr+'</tr>') ;
 			}
 
 
@@ -445,48 +506,4 @@ $( document ).ready(function() {
 });
 
 </script>
-
-  <div id="spinner"  class="se-pre-con"></div>
-
-
-    <div style="display:none;" id="popup"><span class="button b-close"><span>X</span></span>
-	<table id="popuptable">
-		<thead>
-		<tr>
-		<th>IndexNr</th>
-		<th>Name</th>
-		<th>Nr received</th>
-		<th>Nr expected</th>
-		</tr>
-		</thead>	
-		<tbody id="popuptablebody">
-		</tbody>
-	</table> 
-    </div>
-	
-	
-    <div style="display:none;" id="popuptemp"><span class="button b-close"><span>X</span></span>
-	<table id="popuptabletemp">
-		<thead>
-		<tr>
-		<th>IndexNr</th>
-		<th>Name</th>
-		<th>Status</th>
-		<th>Nr UA temp (trop) </th>
-		<th>Nr UA temp (stra) </th>
-		<th>Nr UA humidity (trop) </th>
-		<th>Nr UA humidity (stra) </th>
-		<th>Nr UA zonal wind (trop) </th>
-		<th>Nr UA zonal wind (stra) </th>
-		<th>Nr UA merio wind (trop) </th>
-		<th>Nr UA merio wind (stra) </th>
-		</tr>
-		</thead>	
-		<tbody id="popuptablebodytemp">
-		</tbody>
-	</table> 
-    </div>
-	
-
- </body>
-</html>
+{% endblock mapinteraction %}

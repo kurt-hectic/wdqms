@@ -1,0 +1,355 @@
+{% extends "map-template.html" %}
+{% block title %} WDQMS - NWP vs NWP {% endblock title %}
+{% block rightcol %}
+		<h1>NWP monitoring pilot project</h2>		
+	
+		<div>
+			<select class="mycontrol" id="style">
+				<option value="avsbstyle" >normal style</option>
+				<option value="avsbstyle_new" >diff style</option>
+			</select>
+			<label>select visualization</label>
+			</div>
+			<div>
+			<select class="mycontrol" id="filetype">
+				<option value="SYNOP" >SYNOP (surface pressure)</option>
+			</select>
+			</div>
+			<div>
+			<select class="mycontrol" id="nwpcentera">
+				<option>ECMWF</option>
+				<option selected="selected">JMA</option>
+				<option>DWD</option>
+				<option>NCEP</option>
+			</select>
+			<label>select A center</label>
+			</div>
+			<div>
+			<select class="mycontrol" id="nwpcenterb">
+				<option selected="selected">ECMWF</option>
+				<option>JMA</option>
+				<option>DWD</option>
+				<option>NCEP</option>
+			</select>
+			<label>select B center</label>
+			</div>
+			<input type="text" id="datepicker" ></input>
+			<label>select date</label>
+			<div>
+			<input type="radio" name="hourpicker" value="0">0h</input>
+			<input type="radio" name="hourpicker" value="6">6h</input>
+			<input type="radio" name="hourpicker" value="12">12h</input>
+			<input type="radio" name="hourpicker" value="18">18h</input>
+			</div>
+
+			<div id="synoplegend" style="">
+			<h2>Legend</h2>
+			<div id="nomore" style="color:#009900">same amount</div>
+			<div id="amore" style="color:#334CFF">A has more</div>
+			<div id="bmore" style="color:#ff4833">B has more</div>
+			</div>
+
+		</div>
+
+{% endblock rightcol %}
+
+
+{% block updatemap %}
+
+<script language="javascript">
+
+
+function updateMapLayer() {
+			
+	var date = new Date( $('#datepicker').val()  );
+	var hour =  $('input[name="hourpicker"]:checked').val() ;
+		
+	year = 	date.getFullYear();
+	month = date.getMonth()+1;
+	day = date.getDate();
+
+	synoptichour = 	parseInt(hour);
+
+	centera = $("#nwpcentera").val();
+	centerb = $("#nwpcenterb").val();
+	filetype = $("#filetype").val();
+
+	$("#amore").html(centera + " has more");
+	$("#bmore").html(centerb + " has more");
+
+	$(".acenter").html(centera);
+	$(".bcenter").html(centerb);
+
+	mylayer.setVisible(false);
+
+
+	viewparam = 'year:' + year + ";month:"+month+";day:"+day+";hourperiod:"+synoptichour+";centera:"+centera+";centerb:"+centerb ;
+
+	//console.log(viewparam);
+		
+	params = mylayer.getSource().getParams();
+
+	var style = $("#style").val();
+	
+	if ( style == 'avsbstyle' ) {
+		more_color = "#334CFF";
+		less_color = "#ff4833";
+		same_color = "#009900";
+		params.env = "more_color:"+more_color+";less_color:"+less_color+";same_opacity:1.0;same_color:"+same_color;
+		$("#amore").css('color',more_color);
+		$("#bmore").css('color',less_color);
+		$("#nomore").html('same number');
+		$("#nomore").css('color',same_color);
+	} else if ( style == 'avsbstyle_new') {
+		more_color = "#5006FB";
+		less_color = "#D35400";
+		same_color = "#ffffff";
+		params.env = "more_color:"+more_color+";less_color:"+less_color+";same_opacity:0;same_color:#fffff";
+		$("#amore").css('color',more_color);
+		$("#bmore").css('color',less_color);
+		$("#nomore").html('');
+	}
+	params.VIEWPARAMS = viewparam;
+
+	mylayer.setVisible(true);
+		
+	mylayer.getSource().changed();
+	$("#spinner").show();
+
+	mylayer.getSource().setAttributions([new ol.Attribution({
+      		html: centera + " vs. " + centerb + ":" + year + "/" + month + "/" + day + " " + synoptichour  + ":00-" + (synoptichour + 5) + ":59"
+    	})]);
+	//console.log("done..");
+}
+
+</script>
+
+{% endblock updatemap %}
+
+
+{% block calendar %}
+
+<script language="javascript">
+
+var dateinfo;
+
+function initCalendar() {
+
+	paramdata = {} ;
+
+	paramdata["centera"] = $("#nwpcentera").val();
+	paramdata["centerb"] = $("#nwpcenterb").val();
+	paramdata["type"] = $("#filetype").val();
+
+	$.getJSON( "./listimports-json", paramdata,  function( data ) {
+
+		//console.log(data);
+
+		dateinfo = data ;
+
+	        $( "#datepicker" ).datepicker({ 
+			dateFormat: 'yy/mm/dd' ,
+			defaultDate: dateinfo.maxdate,
+			beforeShowDay: function(date){
+	        		var string = jQuery.datepicker.formatDate('yy/mm/dd', date);
+	        		return [ string in dateinfo.dates ]
+	    		},
+			onSelect: function(date,inst) {
+	        		//var string = jQuery.datepicker.formatDate('yy/mm/dd', date);
+				$("input[name='hourpicker']").prop('disabled','disabled');
+
+				//console.log(dateinfo.dates[date]);
+				activehours = dateinfo.dates[date];
+				for (var i=0 ; i < activehours.length ; i++ ) {
+					$("input[name='hourpicker'][value='" + parseInt(activehours[i]) + "']").prop('disabled',false);
+					
+				}
+			}
+		});
+
+		$("#datepicker").val(dateinfo.maxdate);
+		$("input[name='hourpicker']").prop('disabled','disabled');
+		for (var i=0; i<dateinfo.maxtimes.length ; i++) {
+			$("input[name='hourpicker'][value='" + parseInt(dateinfo.maxtimes[i] ) + "']").prop('disabled',false);
+		}
+		$("input[name='hourpicker'][value='" + parseInt(dateinfo.maxtime) + "']").prop('checked','checked');
+
+		updateMapLayer();
+
+	});
+}
+
+
+$('input[name="hourpicker"]').on('change', function() {
+	updateMapLayer();
+});
+
+
+$('select.mycontrol').on('change', function() {
+	initCalendar();
+	updateMapLayer();
+});
+
+$('#filetype').on('change', function() {
+	var filetype = $("#filetype").val();
+
+	if (filetype=="SYNOP") {
+		$("#synoplegend").show();
+		$("#templegend").hide();
+	} else if (filetype == "TEMP") {
+		$("#synoplegend").hide();
+		$("#templegend").show();
+	}
+});
+   
+</script>
+
+{% endblock calendar %}
+  
+{% block maplayers %}
+<script type="text/javascript">
+
+var mylayer =  new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          params: {'FORMAT': 'image/png',
+                   'VERSION': '1.1.1',  
+                LAYERS: 'wdqms:avsb',
+                STYLES: 'wdqms:avsbstyle' ,
+		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
+          }, 
+	  imageLoadFunction: function(image, src) {
+		var imageElement = image.getImage();
+		imageElement.onload = function() {
+			$("#spinner").hide();
+		};
+		imageElement.src = src;
+			
+	 },
+		  
+		  
+        }),
+	visible: false,
+      }) ;
+
+var map = new ol.Map({
+    target: 'map',
+    layers: [
+new ol.layer.Tile({
+      source: new ol.source.XYZ({
+        url: 'https://api.mapbox.com/styles/v1/kurt-hectic/cj488lfn91qxh2rrz0nghg0y3/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoia3VydC1oZWN0aWMiLCJhIjoiY2loNGtsNzc0MHpvdHgxbTBxejQzOGVpZiJ9.NiOdnMqDcZKeR6Oxo7tWmw'
+      })
+    }),
+	mylayer,	
+    ],
+    view: new ol.View({
+      center: [-13657275.569447909, 5699392.057118396],
+      zoom: 2
+    }),
+    controls: ol.control.defaults({
+      attributionOptions: {
+        collapsible: false
+      }
+    })
+  });
+
+</script>
+{% endblock maplayers %}
+
+
+{% block mapinteraction %}
+
+<script language="javascript">
+
+function onMoveEnd(evt) {
+	$("#spinner").show();
+}
+
+map.on('moveend', onMoveEnd);
+
+map.on('singleclick', function(evt) {
+	var view = map.getView();
+	var viewResolution = view.getResolution();
+
+	filetype = $("#filetype").val();
+
+	if (filetype == "SYNOP") {
+		var popupid = "#popup";
+		var source = mylayer.getSource();	
+		var url = source.getGetFeatureInfoUrl(
+	  		evt.coordinate, viewResolution, view.getProjection(), {'INFO_FORMAT': 'application/json', 'FEATURE_COUNT': 50});
+		//console.log(url);
+		//url=url.replace(/wdqms%3Apercentreceived/g,'wdqms:percentreceivedex');
+		//console.log(url);
+	} 
+
+	if (url) {
+		$.getJSON( url , function( data ) {
+		  
+		$("#popuptablebody").empty();
+	  
+		  $.each( data.features, function( idx ) {
+			//console.log(idx);
+			prop = data.features[idx].properties;
+			if (filetype == "SYNOP") {
+				$("#popuptablebody").append('<tr ><td>'+prop.wigosid+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.rec_a+'</td><td>'+prop.rec_b+'</td><td>'+prop.per_a+'</td><td>'+prop.per_b+'</td><td>'+prop.nr_expected+'</td><td><a href="{% url 'station'  %}'+prop.wigosid+'">Details</a></td></tr>') ;
+	
+			} 
+
+			    
+		  });
+ 
+
+
+
+		$(popupid).bPopup({
+		    follow: [false, false], //x, y
+		    position: [150, 400] //x, y
+		  });	  
+		 
+		  
+		});
+
+
+		//document.getElementById('nodelist').innerHTML = '<iframe seamless src="' + url + '"></iframe>';
+	}
+});
+
+
+obj = {};
+
+setTimeout(function(){
+	   window.location.reload(1);
+}, 12*60*60*1000); //refresh every 12h
+
+$( document ).ready(function() {
+	$("#filetype").trigger('change');
+});
+
+</script>
+{% endblock mapinteraction %}
+
+{% block popups %}
+
+    <div style="display:none;" id="popup"><span class="button b-close"><span>X</span></span>
+	<table id="popuptable">
+		<thead>
+		<tr>
+		<th>WIGOS ID</th>
+		<th>Name</th>
+		<th>Nr received <span class="acenter">A</span></th>
+		<th>Nr received <span class="bcenter">B</span></th>
+		<th>Per received <span class="acenter">A</span></th>
+		<th>Per received <span class="bcenter">B</span></th>
+		<th>Nr expected</th>
+		<th>Details</th>
+		</tr>
+		</thead>	
+		<tbody id="popuptablebody">
+		</tbody>
+	</table> 
+    </div>
+	
+{% endblock popups %}
+

@@ -1,0 +1,109 @@
+  .circle {
+      width: 10px;
+      height: 10px;
+      -webkit-border-radius: 5px;
+      -moz-border-radius: 5px;
+      border-radius: 5px;
+	  display: inline-block;
+	  white-space: nowrap;
+	margin-left:30px;
+	margin-right: 10px;
+	}
+
+	#popup {
+	background-color: #FFF;
+	border-radius: 10px;
+	box-shadow: 0px 0px 25px 5px #999;
+	color: #111;
+	display: none;
+	min-width: 550px;
+	height: 400px;
+	padding:10px;
+  }
+  
+    .button.b-close, .button.bClose {
+    border-radius: 7px;
+    box-shadow: none;
+    font: bold 131% sans-serif;
+    padding: 0px 6px 2px;
+    position: absolute;
+    right: -7px;
+    top: -7px;
+  }
+
+.button > span {
+    font-size: 84%;
+}
+
+.button {
+    background-color: #2B91AF;
+    border-radius: 10px;
+    box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.3);
+    color: #FFF;
+    cursor: pointer;
+    display: inline-block;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+}
+
+
+	/* <!-- */
+body {
+	margin:0;
+	padding:0;
+}
+#subheader h1,
+#subheader h2,
+#subheader p {
+	margin-left:2%;
+	padding-right:2%;
+}
+#active2 #tab2,
+#active3 #tab3,
+#active4 #tab4,
+#active5 #tab5 {
+	font-weight:bold;
+	text-decoration:none;
+	color:#000;
+}
+#footer {
+	clear:both;
+	float:left;
+	width:100%;
+}
+#footer p {
+	margin-left:2%;
+	padding-right:2%;
+}
+
+/* Start of Column CSS */
+#container2 {
+	clear:left;
+	float:left;
+	width:100%;
+	overflow:hidden;
+	/* background:#ffa7a7;  column 2 background colour */
+}
+#container1 {
+	float:left;
+	width:100%;
+	position:relative;
+	right:30%;
+	/* background:#fff689;  column 1 background colour */
+}
+#col1 {
+	float:left;
+	width:66%;
+	position:relative;
+	left:32%;
+	overflow:hidden;
+}
+#col2 {
+	float:left;
+	width:26%;
+	position:relative;
+	left:36%;
+	overflow:hidden;
+}
+/* --> */
