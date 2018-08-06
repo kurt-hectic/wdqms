@@ -47,4 +47,5 @@
 	top: 300px;
 	width:64px;
 	height:64px;
+	background: url({% static "wdqms/3.gif" %}) center no-repeat #fff;
 }
