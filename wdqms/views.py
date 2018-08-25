@@ -401,12 +401,16 @@ def country_cal(request):
     return JsonResponse( { 'nodata' : nodates , 'max' : adjust_date(max["date__max"]) , 'min' : adjust_date(min["date__min"])} )
     
 
-def country(request):
+def country(request,country=None):
 
-    country_code = request.GET.get('cc','UGA')
-    country = Country.objects.filter(code=country_code).exclude(vola_code=None)[0]
+    if country == None:
+       country_code = request.GET.get('cc','UGA')
+       country = Country.objects.filter(code=country_code).exclude(vola_code=None)[0]
+    else:
+       country = Country.objects.filter(name=country).exclude(vola_code=None)[0]
+       country_code = country.code
     if not country:
-       raise ValueError("Country with code: {} not enabled".format(country_code))
+       raise ValueError("Country with code/name: {} not enabled".format(country_code))
 
     countries = Country.objects.all().exclude(vola_code=None)
 
@@ -419,12 +423,17 @@ def country(request):
     return HttpResponse(template.render(context,request))
 
 
-def map(request):
+def map(request,filetype=None,center=None,date=None,hour=None):
     style = request.GET.get('style','wdqmsmap')
     if style not in ['wdqmsmap','wdqmsmaplpr']:
       raise ValueError("{} not supported".format(style))
     template = loader.get_template('map.html')
-    context = {'style':style, 'active' : 'stations'}
+    if date:
+       date=date.replace('-','/')
+    context = {'style':style, 'active' : 'stations', 
+		'filetype' : filetype , 'center':center, 'date':date , 'hour':hour,
+		'directdate' : filetype and center and date and hour
+    }
 
     return HttpResponse(template.render(context,request))
 

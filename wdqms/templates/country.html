@@ -395,7 +395,7 @@ function initTables(initial) {
 	
 	{% for tab in tabs %}
 	
-	ajaxurl = "country_dt?countrycode={{country.code}}&year=" + year + "&month=" + month + "&day=" + day + "&center=" + paramdata["center"] + "&type={{tab}}";
+	ajaxurl = "{% url 'country_dt' %}?countrycode={{country.code}}&year=" + year + "&month=" + month + "&day=" + day + "&center=" + paramdata["center"] + "&type={{tab}}";
 
 	if (initial === true ) {
 		$('#stationtable-{{tab}}').DataTable( {
@@ -455,7 +455,7 @@ function initTables(initial) {
 	});
 
 	$('#countryselect').change(function() {
-		window.location =  "{{request.path}}?cc="+$(this).val();
+		window.location =  "{% url 'country' %}/"+$('#countryselect :selected').text();
 	});
 	
 		  

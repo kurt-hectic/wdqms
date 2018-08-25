@@ -16,6 +16,8 @@ Including another URLconf
 from django.conf.urls import include,url
 from django.contrib import admin
 from django.views.generic.base import RedirectView
+from django.core.urlresolvers import reverse_lazy
+
 
 from . import views 
 
@@ -26,12 +28,14 @@ urlpatterns = [
     url(r'^listimports-json', views.listimports_json, name='listimports_json'),
     url(r'^listimports$', views.listimports, name='listimports'),
     url(r'^map$', views.map, name='map'),
+    url(r'^map/(?P<filetype>[^/]+)/(?P<center>[^/]+)/(?P<date>[^/]+)/(?P<hour>[^/]+)$', views.map, name='map_date'),
     url(r'^maxmap$', views.maxmap, name='maxmap'),
-    url(r'^map.html', views.map, name='map'),
+    url(r'^map.html', RedirectView.as_view(url=reverse_lazy('map'))),
     url(r'^avsbmap$', views.avsbmap, name='avsbmap'),
     url(r'^country_cal', views.country_cal, name='country_cal'),
     url(r'^country_dt', views.country_dt, name='country_dt'),
     url(r'^country$', views.country, name='country'),
+    url(r'^country/(?P<country>[^/]+)$', views.country, name='country_with_name'),
     url(r'^data$', views.data, name='data'),
     url(r'^availability-report$', views.availability_report, name='availability_report'),
     url(r'^station/(?P<stationid>[^/]+)$', views.station, name='station'),

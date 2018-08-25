@@ -114,7 +114,7 @@
 var sondelayer =  new ol.layer.Image({
         source: new ol.source.ImageWMS({
           ratio: 1,
-          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          url: '{{ GEOSERVER_URL }}',
           params: {'FORMAT': 'image/png',
                    'VERSION': '1.1.1',  
                 LAYERS: 'wdqms:radiosondes',
@@ -135,7 +135,7 @@ var sondelayer =  new ol.layer.Image({
 var sondelayer_max =  new ol.layer.Image({
         source: new ol.source.ImageWMS({
           ratio: 1,
-          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          url: '{{ GEOSERVER_URL }}',
           params: {'FORMAT': 'image/png',
                    'VERSION': '1.1.1',  
                 LAYERS: 'wdqms:radiosondes_max',
@@ -155,7 +155,7 @@ var sondelayer_max =  new ol.layer.Image({
 var obslayer =  new ol.layer.Image({
         source: new ol.source.ImageWMS({
           ratio: 1,
-          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          url: '{{ GEOSERVER_URL }}',
           params: {'FORMAT': 'image/png',
                    'VERSION': '1.1.1',  
                 LAYERS: 'wdqms:percentreceived',
@@ -179,7 +179,7 @@ var obslayer =  new ol.layer.Image({
 var obslayer_max =  new ol.layer.Image({
         source: new ol.source.ImageWMS({
           ratio: 1,
-          url: 'http://128.65.196.37:80/geoserver/wdqms/wms',
+          url: '{{ GEOSERVER_URL }}',
           params: {'FORMAT': 'image/png',
                    'VERSION': '1.1.1',  
                 LAYERS: 'wdqms:percentreceived_max',
@@ -244,6 +244,11 @@ function updateMapLayer() {
 	center = $("#nwpcenter").val();
 	filetype = $("#filetype").val();
 
+	url = '{% url 'map' %}/' + filetype + "/" + center + "/" + year + "-" + month + "-" + day + "/" + hour  ;
+
+	window.history.pushState(null, null, url );
+
+
 	obslayer_max.setVisible(false);
 	obslayer.setVisible(false);
 	sondelayer.setVisible(false);
@@ -300,7 +305,7 @@ function initCalendar() {
 	paramdata["center"] = $("#nwpcenter").val();
 	paramdata["type"] = $("#filetype").val();
 
-	$.getJSON( "./listimports-json", paramdata,  function( data ) {
+	$.getJSON( "{% url 'listimports_json' %}", paramdata,  function( data ) {
 
 		//console.log(data);
 
@@ -502,7 +507,25 @@ setTimeout(function(){
 }, 12*60*60*1000); //refresh every 12h
 
 $( document ).ready(function() {
+	{% if filetype %}
+		$("#filetype").val('{{ filetype }}');
+	{% endif %}
+	{% if center %}
+		$("#nwpcenter").val('{{ center }}');
+	{% endif %}
+	{% if date %}
+		$("#datepicker").val('{{ date }}');
+	{% endif %}
+	{% if hour %}
+		$("input[name='hourpicker']").prop('checked',false);
+		$("input[name='hourpicker'][value='{{ hour }}']").prop('checked',true);
+	{% endif %}
+	{% if not directdate %}
 	$("#filetype").trigger('change');
+	{% endif %}
+	{% if directdate %}
+	updateMapLayer(); 
+	{% endif %}
 });
 
 </script>

@@ -7,11 +7,11 @@
 <p>The following information is currently available in the tool:</p>
 
 <ul>
-<li>Overview of <a href="listimports">imported information</a> in the tool </li>
-<li>Map showing <a href="map">data availability</a> by station </li>
-<li>Map showing <a href="avsbmap">difference between NWP centers</a> by station </li>
-<li>Monitoring <a href="country?cc=UGA">by country</a> (for selected countries) </li>
-<li>Disk size <a href="listspace">of WDQMS server</a></li>
+<li>Overview of <a href="{% url 'listimports' %}">imported information</a> in the tool </li>
+<li>Map showing <a href="{% url 'map' %}">data availability</a> by station </li>
+<li>Map showing <a href="{% url 'avsbmap' %}">difference between NWP centers</a> by station </li>
+<li>Monitoring <a href="{% url 'country' %}">by country</a> (for selected countries) </li>
+<li>Disk size <a href="{% url 'listspace' %}">of WDQMS server</a></li>
 </ul>
 
 {% endblock body %}
