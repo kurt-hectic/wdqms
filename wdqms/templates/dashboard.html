@@ -323,6 +323,10 @@ setTimeout(function(){
 
 $( document ).ready(function() {
 	$("#filetype").trigger('change');
+	$('#countryselect').change(function() {
+		window.location =  "{% url 'dashboard' %}/"+$('#countryselect :selected').text();
+	});
+
 	//loadChart('0-20000-0-63602','#station1','ARUA');
 	{% for station in stations %}
 		loadChart('{{station.wigosid}}','#station{{forloop.counter}}','{{station.name}}');
