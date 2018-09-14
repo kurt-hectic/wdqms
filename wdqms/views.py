@@ -26,7 +26,7 @@ def index(request):
 def dashboard(request,country='Niger'):
 
     country = Country.objects.filter(name__icontains=country)[0]
-    countries = Country.objects.all().exclude(vola_code=None)
+    countries = Country.objects.all().exclude(vola_code=None).order_by('name')
 
     if not country:
        raise ValueError("country not enabled")
@@ -412,7 +412,7 @@ def country(request,country=None):
     if not country:
        raise ValueError("Country with code/name: {} not enabled".format(country_code))
 
-    countries = Country.objects.all().exclude(vola_code=None)
+    countries = Country.objects.all().exclude(vola_code=None).order_by('name')
 
     yesterday = datetime.datetime.now() - timedelta(days=1)
     tabs = [ "noreport" , "underperf" , "quality" , "normal"]
