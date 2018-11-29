@@ -4,7 +4,7 @@ from django.template import loader
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.http import JsonResponse
-from .models import Period,Country,Station
+from .models import Period,Country,Station,Period,NrObservation
 from django.db.models import Max,Min,Sum,Count
 from datetime import date,timedelta,datetime
 from django.db import connection, transaction
@@ -422,6 +422,13 @@ def country(request,country=None):
     context = {'country':country, 'countries' : countries, 'yesterday':yesterday , 'tabs' : tabs , 'active' : 'country'}
     return HttpResponse(template.render(context,request))
 
+@json_response
+def observations_agg(request,center=None,date=None,hour=None,variable=None):
+    p = Period.objects.get(date="{} {}:00:00".format(date,hour),center=center,filetype='SYNOP')
+
+    nr_obs = p.nrobservation_set.filter(varid=variable)
+
+    return nr_obs
 
 def map(request,filetype=None,center=None,date=None,hour=None):
     style = request.GET.get('style','wdqmsmap')
@@ -458,18 +465,18 @@ def listimports_json(request):
        periods = Period.objects.filter(filetype=mytype)
     else:
        periods = Period.objects.filter(center=center,filetype=mytype)
-    mindate = periods.first().to_date().strftime("%Y/%m/%d")
-    maxdate = periods.last().to_date().strftime("%Y/%m/%d")
+    mindate = periods.first().date.strftime("%Y/%m/%d")
+    maxdate = periods.last().date.strftime("%Y/%m/%d")
 
     dates = {}
     for period in periods:
-       key = period.to_date().strftime("%Y/%m/%d")
+       key = period.date.strftime("%Y/%m/%d")
        if key in dates:
          val = str(period.hour)
          if val not in dates[key]:
             dates[key].append(val)
        else:
-         dates[key] = [str(period.hour),]
+         dates[key] = [str(period.date.hour),]
 
     data = { 'dates' : dates , 'mindate' : mindate, 'maxdate' : maxdate, 'maxtime' : dates[maxdate][-1], 'maxtimes' : dates[maxdate] }
 

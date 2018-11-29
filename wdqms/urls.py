@@ -42,6 +42,7 @@ urlpatterns = [
     url(r'^station/$', views.station, name='station'),
     url(r'^country_dashboard/(?P<country>[^/]+)$', views.dashboard, name='dashboard'),
     url(r'^country_dashboard$', views.dashboard, name='dashboard'),
+    url(r'^api/observations_agg/(?P<center>[^/]+)/(?P<date>[^/]+)/(?P<hour>[^/]+)/(?P<variable>[^/]+)$', views.observations_agg, name='observations_agg' ),
     url(r'^api/nrreceived/(?P<stationid>[^/]+)/(?P<variable>[^/]+)', views.nrreceived, name='nrreceived' ),
     url(r'^api/countryaggregate/(?P<countrycode>[^/]+)', views.countryaggregate, name='countryaggregate' ),
     url(r'^api/download_file$', views.download_file, name='filedownload' ),

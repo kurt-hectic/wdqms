@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
     'wdqms',
 ]
 
@@ -46,7 +47,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    #'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -63,7 +64,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
+                #'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
     		'wdqms.context_processors.global_settings',
             ],
@@ -79,7 +80,7 @@ WSGI_APPLICATION = 'wdqms.wsgi.application'
 
 DATABASES = {
     'default': {
-	'ENGINE': 'django.db.backends.postgresql_psycopg2',
+	'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'devwdqms',
         'USER': 'wdqms',
         'PASSWORD': 'wdqms',
@@ -87,6 +88,9 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
+DEFAULT_TABLESPACE = 'wdqmstbls'
+
 
 
 # Password validation
@@ -140,3 +144,32 @@ CELERY_BEAT_SCHEDULE ={
         'schedule': crontab(minute='*/2', hour="*"),
     },
 }
+
+# wdqms specific config
+WDQMS = { 'IMPORTER' : {
+        'ENABLED_NWP_CENTERS' : ['ECMWF','DWD','JMA','NCEP' ],
+        'PASSWORD_ECMWF'  : 'Wigos2015',
+        'USER_ECMWF' : 'wmodatamon',
+        'PASSWORD_JMA' : 'Wigos2016',
+        'USER_JMA' : 'wigosqm',
+        'PATH' : '/tmp/rawfiles',
+        'DWD_DIR' : 'dissemination.ecmwf.int/DWD/SYNOP',
+        'DWD_NEW_DIR' : 'DWD/SYNOP',
+        'JMA_BACK' : 2,
+        'DWD_BACK' : 2,
+        'ECMWF_BACK' : 2,
+        'NCEP_BACK' : 2,
+        'IGNORE_FILE' : "wdqms/import-ignore.txt"
+    },
+    'DATADIRS': {
+        'ECMWF' : 'dissemination.ecmwf.int/ECMF/',
+        'DWD' : "DWD/",
+        'JMA' : "qc.kishou.go.jp/WIGOS_QM/",
+        'NCEP' : "www.emc.ncep.noaa.gov/mmab/WIGOS",
+        'NCEP_TEST' : "test-ncep"
+    }
+}
+
+URL_OSCAR_SCHEDULES = "https://oscar.wmo.int/oscar/wdqms/surface_pressure_schedules_report-{}.zip"
+URL_OSCAR_STATIONS = "https://oscar.wmo.int/surface/rest/api/search/station?{}"
+

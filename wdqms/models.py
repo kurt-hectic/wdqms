@@ -1,32 +1,35 @@
-from django.db import models 
+from django.contrib.gis.db import models
 from django.utils import timezone
 from datetime import date
 import datetime
 from django.utils import timezone
 
+    
+
 class Station(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=200)
     wigosid = models.CharField(max_length=200)
-    iso3 = models.CharField(max_length=3,blank=True,null=True)
+    #iso3 = models.CharField(max_length=3,blank=True,null=True)
     region = models.CharField(max_length=200)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
     stationtype = models.CharField(max_length=10)
     nrExp0 = models.IntegerField()
     nrExp6 = models.IntegerField()
     nrExp12 = models.IntegerField()
     nrExp18 = models.IntegerField()
+    closed = models.BooleanField(default=False)
     created = models.DateTimeField(blank=True,default=timezone.now)
+    country = models.ForeignKey("Country",db_column='iso3',null=True,on_delete=models.SET_NULL,)
+    location = models.PointField()
 
     def __eq__(self,other):
-        location_self = "{:4.5f} {:4.5f}".format(self.latitude,self.longitude)
-        location_other = "{:4.5f} {:4.5f}".format(other.latitude,other.longitude)
+        location_self = "{:4.5f} {:4.5f}".format(self.location.coords[0],self.location.coords[1])
+        location_other = "{:4.5f} {:4.5f}".format(other.location.coords[0],other.location.coords[1])
 
         if location_self != location_other:
             print("{} different location {} {}".format(self.wigosid,location_self,location_other))
 
-        cmpattr = ['name','wigosid','iso3','region','nrExp0','nrExp6','nrExp12','nrExp18']
+        cmpattr = ['name','wigosid','country','region','nrExp0','nrExp6','nrExp12','nrExp18','closed']
 
         for ca in cmpattr:
             if getattr(self,ca) != getattr(other,ca):
@@ -52,10 +55,74 @@ class Station(models.Model):
             return "name: {} idx: {}  created:{}".format(self.name,self.wigosid,self.created)
 
 
+class Observation(models.Model):
+
+    id = models.AutoField(primary_key=True)
+    centre = models.CharField(max_length=10)
+    varid = models.PositiveSmallIntegerField()
+    observationdate = models.DateTimeField()
+    location = models.PointField()
+    status = models.PositiveSmallIntegerField()
+    bg_dep = models.FloatField(null=True)
+    wigosid = models.CharField(max_length=200,null=True,blank=True)
+
+    station = models.ForeignKey(
+        'Station',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+    )
+    period = models.ForeignKey(
+        'Period',
+        on_delete=models.CASCADE
+    )
+    
+    class Meta:
+        db_table='nwpdata'
+
+class NrObservation(models.Model):
+
+    id = models.AutoField(primary_key=True)
+    centre = models.CharField(max_length=10)
+    varid = models.PositiveSmallIntegerField()
+    assimilationdate = models.DateTimeField()
+    wigosid = models.CharField(max_length=200,null=True,blank=True)
+    location = models.PointField()
+    invola = models.BooleanField()
+    isempty = models.BooleanField()
+    hasduplicate = models.BooleanField()
+    bg_dep = models.FloatField(null=True)
+    nr_expected = models.PositiveSmallIntegerField(null=True)
+    nr_received = models.PositiveSmallIntegerField(null=True)
+    nr_used = models.PositiveSmallIntegerField(null=True)
+    nr_not_used = models.PositiveSmallIntegerField(null=True)
+    nr_rejected = models.PositiveSmallIntegerField(null=True)
+    nr_never_used = models.PositiveSmallIntegerField(null=True)
+    nr_thinned = models.PositiveSmallIntegerField(null=True)
+    nr_rejected_da = models.PositiveSmallIntegerField(null=True)
+    nr_used_alt = models.PositiveSmallIntegerField(null=True)
+    nr_quality_issue = models.PositiveSmallIntegerField(null=True)
+    nr_other_issue = models.PositiveSmallIntegerField(null=True)
+    nr_no_content = models.PositiveSmallIntegerField(null=True)
+    station = models.ForeignKey(
+        'Station',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+    )
+    period = models.ForeignKey(
+        'Period',
+        on_delete=models.CASCADE
+    )
+
+    def __str__(self):
+        return "station_id: {} wid: {} invola:{} nr_ex:{} nr_rec: {} date: {} center: {}".format(self.station_id,self.wigosid,self.invola,self.nr_received,self.nr_expected,self.assimilationdate,self.centre)
+
+    class Meta:
+        db_table='nwpdatabyperiod'
+
 class Country(models.Model):
     code = models.CharField(db_column='cc',max_length=3,primary_key=True)
     name = models.CharField(max_length=100)
-    _bounding_box = models.CharField(db_column='extent',max_length=5000)
+    _bounding_box = models.CharField(db_column='extent',max_length=5000) #TODO: convert to geom
     vola_code = models.IntegerField(null=True,blank=True)
 
     class Meta:
@@ -80,11 +147,11 @@ class Country(models.Model):
         return { 'minlat' : minlat, 'minlon' : minlon , 'maxlat' : maxlat, 'maxlon' : maxlon }
 
 
-
 class Period(models.Model):
     center = models.CharField(max_length=10)
     filetype = models.CharField(max_length=5)
-    date = models.DateField(db_column='mydate')
+    date = models.DateTimeField(db_column='mydate')
+    filetype = models.CharField(max_length=20)
 
 
     class Meta:
@@ -95,3 +162,22 @@ class Period(models.Model):
     def __str__(self):
         return "{}-{}-{}".format(self.date,self.center,self.filetype)
 
+
+class DBStats(models.Model):
+
+    createdate = models.DateTimeField(default=datetime.datetime.now)
+    oid = models.IntegerField(null=True)
+    table_schema = models.CharField(max_length=20,null=True)
+    table_name = models.CharField(max_length=50,null=True)
+    row_estimate = models.FloatField(null=True)
+    total_bytes = models.BigIntegerField(null=True)
+    index_bytes = models.BigIntegerField(null=True)
+    toast_bytes = models.BigIntegerField(null=True)
+    table_bytes = models.BigIntegerField(null=True)
+    total = models.CharField(max_length=50,null=True)
+    index = models.CharField(max_length=50,null=True)
+    toast = models.CharField(max_length=50,null=True)
+    table = models.CharField(max_length=50,null=True)
+
+    class Meta:
+        db_table = 'dbstats'
