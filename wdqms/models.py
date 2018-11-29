@@ -20,7 +20,7 @@ class Station(models.Model):
     closed = models.BooleanField(default=False)
     created = models.DateTimeField(blank=True,default=timezone.now)
     country = models.ForeignKey("Country",db_column='iso3',null=True,on_delete=models.SET_NULL,)
-    location = models.PointField()
+    location = models.PointField(db_column='geom')
 
     def __eq__(self,other):
         location_self = "{:4.5f} {:4.5f}".format(self.location.coords[0],self.location.coords[1])
@@ -61,7 +61,7 @@ class Observation(models.Model):
     centre = models.CharField(max_length=10)
     varid = models.PositiveSmallIntegerField()
     observationdate = models.DateTimeField()
-    location = models.PointField()
+    location = models.PointField(db_column='geom')
     status = models.PositiveSmallIntegerField()
     bg_dep = models.FloatField(null=True)
     wigosid = models.CharField(max_length=200,null=True,blank=True)
@@ -86,7 +86,7 @@ class NrObservation(models.Model):
     varid = models.PositiveSmallIntegerField()
     assimilationdate = models.DateTimeField()
     wigosid = models.CharField(max_length=200,null=True,blank=True)
-    location = models.PointField()
+    location = models.PointField(db_column='geom')
     invola = models.BooleanField()
     isempty = models.BooleanField()
     hasduplicate = models.BooleanField()
@@ -118,6 +118,7 @@ class NrObservation(models.Model):
 
     class Meta:
         db_table='nwpdatabyperiod'
+        indexes = [ models.Index(fields=['assimilationdate',]) , models.Index(fields=['centre',]) ,  models.Index(fields=['location',])] 
 
 class Country(models.Model):
     code = models.CharField(db_column='cc',max_length=3,primary_key=True)
@@ -160,7 +161,7 @@ class Period(models.Model):
         ordering = ['date','center','filetype']
 
     def __str__(self):
-        return "{}-{}-{}".format(self.date,self.center,self.filetype)
+        return "{}-{}-{}".format(self.date.strftime('%Y-%m-%d-%H'),self.center,self.filetype)
 
 
 class DBStats(models.Model):

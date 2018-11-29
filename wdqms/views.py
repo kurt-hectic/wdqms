@@ -489,6 +489,7 @@ def listimports(request):
     for p in periods:
        period_idx[str(p)]=True
 
+
     startdate = date(2016,1,1)
     enddate = date.today()
     delta = enddate - startdate
