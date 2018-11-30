@@ -1,0 +1,15 @@
+<layer>
+  <name>radiosondes</name>
+  <id>LayerInfoImpl-3f088908:166c31db6dd:5c0f</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-37b18cc6:14d5d036d48:-8000</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-3f088908:166c31db6dd:5c0e</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

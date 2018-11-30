@@ -1,0 +1,78 @@
+<featureType>
+  <id>FeatureTypeInfoImpl--328982ea:15631dca6cf:-521d</id>
+  <name>percentreceivedex</name>
+  <nativeName>percentreceivedex</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--328982ea:155d52a5150:-7fff</id>
+  </namespace>
+  <title>percentreceivedex</title>
+  <keywords>
+    <string>features</string>
+    <string>percentreceivedex</string>
+  </keywords>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-179.983333333333</minx>
+    <maxx>179.75</maxx>
+    <miny>-176.61</miny>
+    <maxy>169.13</maxy>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-179.983333333333</minx>
+    <maxx>179.75</maxx>
+    <miny>-176.61</miny>
+    <maxy>169.13</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="JDBC_VIRTUAL_TABLE">
+      <virtualTable>
+        <name>percentreceivedex</name>
+        <sql>select stationname,wigosid,geom,isempty,invola,center,indexnbr,nr_received,nr_expected,nr_used,nr_rejected,nr_blacklisted,nr_passive,nr_missing,per_received,per_used from stationsbyperiodex where yyyy=%year% and mm=%month% and dd=%day% and hourperiod=%hourperiod% and center=&apos;%center%&apos; and varid in (110,1)
+</sql>
+        <escapeSql>false</escapeSql>
+        <geometry>
+          <name>geom</name>
+          <type>Geometry</type>
+          <srid>-1</srid>
+        </geometry>
+        <parameter>
+          <name>hourperiod</name>
+          <defaultValue>0</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>month</name>
+          <defaultValue>1</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>year</name>
+          <defaultValue>2016</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>center</name>
+          <defaultValue>ECMWF</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>day</name>
+          <defaultValue>1</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+      </virtualTable>
+    </entry>
+    <entry key="cachingEnabled">false</entry>
+  </metadata>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl--328982ea:155d52a5150:-7ffe</id>
+  </store>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>

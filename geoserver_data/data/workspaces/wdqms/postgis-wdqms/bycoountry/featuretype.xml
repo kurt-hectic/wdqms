@@ -1,0 +1,87 @@
+<featureType>
+  <id>FeatureTypeInfoImpl--4405b6d3:157c2ee50a2:-3371</id>
+  <name>bycoountry</name>
+  <nativeName>bycoountry</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--328982ea:155d52a5150:-7fff</id>
+  </namespace>
+  <title>bycoountry</title>
+  <keywords>
+    <string>features</string>
+    <string>bycoountry</string>
+  </keywords>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>29.9833333333333</minx>
+    <maxx>34.1666666666667</maxx>
+    <miny>-1.25</miny>
+    <maxy>3.05</maxy>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>29.9833333333333</minx>
+    <maxx>34.1666666666667</maxx>
+    <miny>-1.25</miny>
+    <maxy>3.05</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="JDBC_VIRTUAL_TABLE">
+      <virtualTable>
+        <name>bycoountry</name>
+        <sql>select row_number() OVER() as uid, ss.*, v.stationname, v.geom from vola v join (&#xd;
+select invola, vola_id, center, indexnbr, avg(per_used) as per_used , avg(per_received) as per_received,  &#xd;
+sum(nr_received) as nr_received,&#xd;
+sum( CASE WHEN hasduplicate THEN 0 ELSE nr_expected END )  as nr_expected,&#xd;
+sum(nr_used) as nr_used,sum(nr_rejected) nr_rejected,&#xd;
+sum(nr_blacklisted) as nr_blacklisted, sum(nr_passive) as nr_passive,sum(nr_missing) nr_misssing &#xd;
+from stationsbyperiod s &#xd;
+ where assimilationdate = &apos;%year%-%month%-%day%&apos;&#xd;
+ and varid in (110,1) group by yyyy,mm,dd,center,indexnbr, vola_id, invola ) ss on v.id=ss.vola_id&#xd;
+where ( char_length(&apos;%countrycode%&apos;) = 0 or  v.isocc=&apos;%countrycode%&apos; ) and center = &apos;%center%&apos;
+</sql>
+        <escapeSql>false</escapeSql>
+        <keyColumn>uid</keyColumn>
+        <geometry>
+          <name>geom</name>
+          <type>Geometry</type>
+          <srid>-1</srid>
+        </geometry>
+        <parameter>
+          <name>month</name>
+          <defaultValue>10</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>year</name>
+          <defaultValue>2016</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>countrycode</name>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>center</name>
+          <defaultValue>JMA</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>day</name>
+          <defaultValue>10</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+      </virtualTable>
+    </entry>
+    <entry key="cachingEnabled">false</entry>
+  </metadata>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl--328982ea:155d52a5150:-7ffe</id>
+  </store>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>

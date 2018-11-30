@@ -1,0 +1,92 @@
+<featureType>
+  <id>FeatureTypeInfoImpl-3f088908:16423323bea:2926</id>
+  <name>avsb</name>
+  <nativeName>avsb</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--328982ea:155d52a5150:-7fff</id>
+  </namespace>
+  <title>avsb</title>
+  <keywords>
+    <string>features</string>
+    <string>avsb</string>
+  </keywords>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-179.983333333333</minx>
+    <maxx>179.75</maxx>
+    <miny>-90.0</miny>
+    <maxy>83.6561111111111</maxy>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-179.983333333333</minx>
+    <maxx>179.75</maxx>
+    <miny>-90.0</miny>
+    <maxy>83.6561111111111</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="JDBC_VIRTUAL_TABLE">
+      <virtualTable>
+        <name>avsb</name>
+        <sql>select subqa.wigosid,subqb.geom,subqb.nr_expected, subqa.nr_received as rec_a ,subqb.nr_received as rec_b ,subqa.per_received as per_a ,subqb.per_received as per_b,  (subqa.per_received - subqb.per_received) as diff_per_received    from (&#xd;
+select stationname,wigosid,geom,isempty,invola,center,indexnbr,nr_received,nr_expected,nr_used,nr_rejected,nr_blacklisted,nr_passive,nr_missing,per_received,per_used &#xd;
+from stationsbyperiodex where &#xd;
+assimilationdate = &apos;%yyyy%-%mm%-%dd% %hourperiod%:00:00&apos; and center = &apos;%centera%&apos; and  varid in (110,1)&#xd;
+) as subqa&#xd;
+left join  (&#xd;
+select stationname,wigosid,geom,isempty,invola,center,indexnbr,nr_received,nr_expected,nr_used,nr_rejected,nr_blacklisted,nr_passive,nr_missing,per_received,per_used &#xd;
+from stationsbyperiodex where &#xd;
+yyyy=%yyyy% and mm=%mm% and dd=%dd% and hourperiod=%hourperiod% and center = &apos;%centerb%&apos;  and  varid in (110,1)&#xd;
+) as subqb on (subqb.wigosid = subqa.wigosid)
+</sql>
+        <escapeSql>false</escapeSql>
+        <geometry>
+          <name>geom</name>
+          <type>Geometry</type>
+          <srid>-1</srid>
+        </geometry>
+        <parameter>
+          <name>mm</name>
+          <defaultValue>1</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>dd</name>
+          <defaultValue>1</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>hourperiod</name>
+          <defaultValue>0</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>yyyy</name>
+          <defaultValue>2018</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>centera</name>
+          <defaultValue>ECMWF</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>centerb</name>
+          <defaultValue>JMA</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+      </virtualTable>
+    </entry>
+    <entry key="cachingEnabled">false</entry>
+  </metadata>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl--328982ea:155d52a5150:-7ffe</id>
+  </store>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>

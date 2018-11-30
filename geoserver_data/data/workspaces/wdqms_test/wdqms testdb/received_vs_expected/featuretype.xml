@@ -1,0 +1,95 @@
+<featureType>
+  <id>FeatureTypeInfoImpl-3f088908:1675eed67b6:-713a</id>
+  <name>received_vs_expected</name>
+  <nativeName>received_vs_expected</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl-3f088908:166c31db6dd:5c0a</id>
+  </namespace>
+  <title>received_vs_expected</title>
+  <keywords>
+    <string>features</string>
+    <string>received_vs_expected</string>
+  </keywords>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>-90.0</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>-90.0</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="elevation">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
+    <entry key="JDBC_VIRTUAL_TABLE">
+      <virtualTable>
+        <name>received_vs_expected</name>
+        <sql>select geom,isempty,invola,wigosid, &#xd;
+ceil(( SUM(nr_received)::decimal / SUM(nr_expected) ) * 100) as percentage_received &#xd;
+from nwpdatabyperiod &#xd;
+where &#xd;
+assimilationdate = &apos;%year%-%month%-%day% %hourperiod%:00:00&apos; and centre=&apos;%center%&apos; and varid in (110,1) and not hasduplicate&#xd;
+group by geom,isempty,invola,wigosid
+</sql>
+        <escapeSql>false</escapeSql>
+        <geometry>
+          <name>geom</name>
+          <type>Geometry</type>
+          <srid>-1</srid>
+        </geometry>
+        <parameter>
+          <name>hourperiod</name>
+          <defaultValue>12</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>month</name>
+          <defaultValue>9</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>year</name>
+          <defaultValue>2018</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>center</name>
+          <defaultValue>DWD</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>day</name>
+          <defaultValue>15</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+      </virtualTable>
+    </entry>
+    <entry key="time">
+      <dimensionInfo>
+        <enabled>false</enabled>
+        <defaultValue/>
+      </dimensionInfo>
+    </entry>
+    <entry key="cachingEnabled">false</entry>
+  </metadata>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl--4405b6d3:1566e2d48a7:-7b7f</id>
+  </store>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>

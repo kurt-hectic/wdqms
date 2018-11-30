@@ -1,0 +1,15 @@
+<layer>
+  <name>volaex</name>
+  <id>LayerInfoImpl--328982ea:155d52a5150:-5dd7</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--570ae188:124761b8d78:-7fdf</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--328982ea:155d52a5150:-5dd8</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

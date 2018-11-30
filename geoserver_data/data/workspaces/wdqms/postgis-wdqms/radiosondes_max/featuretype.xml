@@ -1,0 +1,105 @@
+<featureType>
+  <id>FeatureTypeInfoImpl-3f088908:1641d139780:519</id>
+  <name>radiosondes_max</name>
+  <nativeName>radiosondes_max</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--328982ea:155d52a5150:-7fff</id>
+  </namespace>
+  <title>radiosondes_max</title>
+  <keywords>
+    <string>features</string>
+    <string>radiosondes_max</string>
+  </keywords>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>-90.0</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>-90.0</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="JDBC_VIRTUAL_TABLE">
+      <virtualTable>
+        <name>radiosondes_max</name>
+        <sql>select geom, indexnbr,wigosid, MAX(sondestatus) as sondestatus from (&#xd;
+select * ,&#xd;
+CASE &#xd;
+ WHEN NOT invola THEN &apos;notinvola&apos; &#xd;
+ WHEN isempty THEN &apos;empty&apos;&#xd;
+ WHEN nr_received_2_tropo &gt; 0 AND nr_received_3_tropo &gt; 0 AND nr_received_4_tropo &gt; 0 AND nr_received_29_tropo &gt; 0 &#xd;
+      AND nr_received_2_strato &gt; 0 AND nr_received_3_strato &gt; 0 AND nr_received_4_tropo &gt; 0 AND nr_received_29_strato &gt; 0 THEN &apos;complete&apos;&#xd;
+ WHEN nr_received_3_tropo &gt; 0 AND nr_received_3_strato &gt; 0 AND nr_received_4_tropo &gt; 0 AND nr_received_4_strato &gt; 0  &#xd;
+      AND nr_received_2_tropo = 0 AND nr_received_29_tropo = 0 THEN &apos;pilot&apos;&#xd;
+ WHEN nr_received_strato = 0  AND  nr_received_2_tropo &gt; 0 AND nr_received_3_tropo &gt; 0 AND nr_received_4_tropo &gt; 0 AND nr_received_29_tropo &gt; 0  THEN &apos;incompletelayers&apos;&#xd;
+ ELSE &apos;incompletevariables&apos; END as sondestatus &#xd;
+from ( select s.geom,s.isempty,s.invola,s.indexnbr,wigosid,stationname,center,  SUM(nr_received) as nr_received,&#xd;
+sum( CASE WHEN hasduplicate THEN 0 ELSE nr_expected END )  as nr_expected, AVG(per_received) as per_received,&#xd;
+sum( CASE WHEN level = &apos;stra&apos; THEN 1 ELSE 0 END ) as nr_stra ,&#xd;
+sum( CASE WHEN level=&apos;trop&apos; AND varid=2 THEN nr_received ELSE 0 END  ) as nr_received_2_tropo, &#xd;
+sum( CASE WHEN level=&apos;trop&apos; AND varid=3 THEN nr_received ELSE 0 END  ) as nr_received_3_tropo, &#xd;
+sum( CASE WHEN level=&apos;trop&apos; AND varid=4 THEN nr_received ELSE 0 END  ) as nr_received_4_tropo, &#xd;
+sum( CASE WHEN level=&apos;trop&apos; AND varid=29 THEN nr_received ELSE 0 END  ) as nr_received_29_tropo, &#xd;
+sum( CASE WHEN level=&apos;stra&apos; AND varid=2 THEN nr_received ELSE 0 END  ) as nr_received_2_strato, &#xd;
+sum( CASE WHEN level=&apos;stra&apos; AND varid=3 THEN nr_received ELSE 0 END  ) as nr_received_3_strato, &#xd;
+sum( CASE WHEN level=&apos;stra&apos; AND varid=4 THEN nr_received ELSE 0 END  ) as nr_received_4_strato, &#xd;
+sum( CASE WHEN level=&apos;stra&apos; AND varid=29 THEN nr_received ELSE 0 END  ) as nr_received_29_strato,&#xd;
+sum( CASE WHEN level=&apos;stra&apos;  THEN nr_received ELSE 0 END  ) as nr_received_strato,&#xd;
+sum( CASE WHEN level=&apos;trop&apos;  THEN nr_received ELSE 0 END  ) as nr_received_tropo&#xd;
+ from stationsbyperiodex s &#xd;
+where &#xd;
+assimilationdate = &apos;%year%-%month%-%day% %hourperiod%:00:00&apos;&#xd;
+ and varid in (2,3,4,29)  &#xd;
+group by s.geom,isempty,invola,s.indexnbr,wigosid,stationname, center&#xd;
+) as subq&#xd;
+) as subq2 &#xd;
+group by geom,indexnbr,wigosid
+</sql>
+        <escapeSql>false</escapeSql>
+        <geometry>
+          <name>geom</name>
+          <type>Geometry</type>
+          <srid>-1</srid>
+        </geometry>
+        <parameter>
+          <name>hourperiod</name>
+          <defaultValue>0</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>month</name>
+          <defaultValue>1</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>year</name>
+          <defaultValue>2018</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>day</name>
+          <defaultValue>1</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+      </virtualTable>
+    </entry>
+    <entry key="cachingEnabled">false</entry>
+  </metadata>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl--328982ea:155d52a5150:-7ffe</id>
+  </store>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>

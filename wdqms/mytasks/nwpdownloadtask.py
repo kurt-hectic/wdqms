@@ -107,6 +107,8 @@ class NwpDownloadTask:
         sio.close()
         nr_obs = len(df_observations)
 
+    
+
         # get the current stations in the DB. Only get the latest of each station
         current_stations = {}
         for station in Station.objects.filter(closed=False).order_by('wigosid', '-created').distinct('wigosid'):
@@ -151,7 +153,7 @@ class NwpDownloadTask:
 
 
         # aggregate by station and statusflag to get number by statusflag
-        df_obs_agg = df_observations.groupby( ['station_id','statusflag','var_id','centre_id'])['bg_dep'].count().reset_index()
+        df_obs_agg = df_observations.groupby( ['station_id','statusflag','var_id','centre_id'] )['bg_dep'].count().reset_index()
         df_obs_agg = df_obs_agg.set_index(['station_id','var_id','centre_id','statusflag'])
         #df_right.rename(columns={'o-b':'count'},inplace=True)
         df_obs_agg = df_obs_agg.unstack(level=-1) # transpose the groups to get rows as columns
@@ -177,19 +179,27 @@ class NwpDownloadTask:
         # join with oscar info
         df_obs_agg=df_obs_agg.join( df_oscar[oscar_cols] , on='station_id' , how='left', rsuffix=suffix) 
         nr_obs_agg = len(df_obs_agg)
+
         
         for df in [df_observations, df_obs_agg]:
             # identify stations in OSCAR and copy location. set id of empty station for stations not in OSCAR
             # OSCAR coordinates are more authorative. If we have no match we use what was reported in the message
-            idx_not_in_oscar = df['id'].isna()
+            idx_not_in_oscar = df['wigosid'].isna()
             df.loc[ idx_not_in_oscar ,'id'] = None
             df.loc[ idx_not_in_oscar ,'name'] = "Unknown"
-            df.loc[ idx_not_in_oscar , ["latitude","longitude"]] = df[ idx_not_in_oscar ][["latitude"+suffix,"longitude"+suffix]]
+
+            #df.loc[ ~idx_not_in_oscar , ["latitude","longitude"]] = df.loc[ ~idx_not_in_oscar , ["latitude"+suffix,"longitude"+suffix]].astype(float)
+            df.loc[ ~idx_not_in_oscar , 'latitude' ] = df.loc[ ~idx_not_in_oscar , 'latitude_oscar' ]
+            df.loc[ ~idx_not_in_oscar , 'longitude' ] = df.loc[ ~idx_not_in_oscar , 'longitude_oscar' ]
+
+
+            #print( df[ ~idx_not_in_oscar ][["latitude"+suffix,"longitude"+suffix]] )
             df["invola"] = ~idx_not_in_oscar 
             # df.loc[~idx_not_in_oscar , "invola"]=True 
             # df.loc[ idx_not_in_oscar , "invola"]=False
             df.loc[ idx_not_in_oscar , "wigosid"] = df[ idx_not_in_oscar ]["station_id"]
             # TODO: ready to be inserted into DB (obs table)
+            #print( df[ df[['latitude','longitude']].isnull().any(axis=1) ] )
 
 
         print("len oscar %s len obs %s len obs_osc %s len ignored_stat %s len ignoed obs %s" % ( nr_oscar , nr_obs , nr_obs_agg , len(df_ignored_stations),len(df_ignored_obs)))
@@ -216,6 +226,7 @@ class NwpDownloadTask:
             df_duplicate = df_obs_agg.reset_index().set_index('station_id')
             duplicates = df_duplicate[df_duplicate["var_id"]==110].join( df_duplicate[ df_duplicate["var_id"]==1 ], how='inner' , lsuffix="_left").index.tolist()
             df_obs_agg["hasduplicate"] = ( df_obs_agg.index.isin( duplicates ) ) & ( df_obs_agg["var_id"] == 1 )
+
 
         print("insert objects into DB")
         batch_size = 1000

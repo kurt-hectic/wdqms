@@ -1,0 +1,84 @@
+<featureType>
+  <id>FeatureTypeInfoImpl-3f088908:1641243bd5f:-5e0a</id>
+  <name>percentreceived_max</name>
+  <nativeName>percentreceived_max</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--328982ea:155d52a5150:-7fff</id>
+  </namespace>
+  <title>percentreceived_max</title>
+  <keywords>
+    <string>features</string>
+    <string>percentreceived_max</string>
+  </keywords>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-179.983333333333</minx>
+    <maxx>179.75</maxx>
+    <miny>-90.0</miny>
+    <maxy>83.6561111111111</maxy>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-179.983333333333</minx>
+    <maxx>179.75</maxx>
+    <miny>-90.0</miny>
+    <maxy>83.6561111111111</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="JDBC_VIRTUAL_TABLE">
+      <virtualTable>
+        <name>percentreceived_max</name>
+        <sql>select geom,invola,indexnbr, max( per_received ) as per_received, max(nr_received) as nr_received, MIN(isempty::integer)::boolean as isempty&#xd;
+from (&#xd;
+select geom,isempty,invola,indexnbr,center,SUM(nr_received) as nr_received,&#xd;
+sum( CASE WHEN hasduplicate THEN 0 ELSE nr_expected END )  as nr_expected,&#xd;
+SUM(nr_used) as nr_used,SUM(nr_rejected) as nr_rejected ,SUM(nr_blacklisted) as nr_blacklisted,SUM(nr_passive) as nr_passive,SUM(nr_missing) as nr_missing, &#xd;
+AVG(per_received) as per_received, AVG(per_used) as per_used &#xd;
+from stationsbyperiod &#xd;
+where &#xd;
+assimilationdate = &apos;%year%-%month%-%day% %hourperiod%:00:00&apos; and varid in (110,1) &#xd;
+group by geom,isempty,invola,indexnbr,center&#xd;
+) as sq &#xd;
+ group by geom,invola,indexnbr
+</sql>
+        <escapeSql>false</escapeSql>
+        <geometry>
+          <name>geom</name>
+          <type>Geometry</type>
+          <srid>-1</srid>
+        </geometry>
+        <parameter>
+          <name>hourperiod</name>
+          <defaultValue>0</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>month</name>
+          <defaultValue>1</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>year</name>
+          <defaultValue>2016</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>day</name>
+          <defaultValue>1</defaultValue>
+          <regexpValidator>^[\w\d\s]+$</regexpValidator>
+        </parameter>
+      </virtualTable>
+    </entry>
+    <entry key="cachingEnabled">false</entry>
+  </metadata>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl--328982ea:155d52a5150:-7ffe</id>
+  </store>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>

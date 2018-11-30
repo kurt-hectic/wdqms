@@ -1,0 +1,15 @@
+<layer>
+  <name>radiosondes_max</name>
+  <id>LayerInfoImpl-3f088908:1641d139780:51a</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--551824c7:15f53e87bb2:6800</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-3f088908:1641d139780:519</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

@@ -1,0 +1,15 @@
+<layer>
+  <name>by_country_month</name>
+  <id>LayerInfoImpl-3f088908:161c1f6f938:4ecf</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--328982ea:155d52a5150:62cd</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-3f088908:161c1f6f938:4ece</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

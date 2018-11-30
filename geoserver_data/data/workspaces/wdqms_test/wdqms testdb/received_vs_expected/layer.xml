@@ -1,0 +1,15 @@
+<layer>
+  <name>received_vs_expected</name>
+  <id>LayerInfoImpl-3f088908:1675eed67b6:-7139</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-3f088908:1675eed67b6:-713c</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-3f088908:1675eed67b6:-713a</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

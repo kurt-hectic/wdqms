@@ -1,0 +1,15 @@
+<layer>
+  <name>percentreceivedex</name>
+  <id>LayerInfoImpl--328982ea:15631dca6cf:-521c</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--328982ea:155d52a5150:62cd</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--328982ea:15631dca6cf:-521d</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

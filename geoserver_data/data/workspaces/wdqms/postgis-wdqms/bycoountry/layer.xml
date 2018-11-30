@@ -1,0 +1,15 @@
+<layer>
+  <name>bycoountry</name>
+  <id>LayerInfoImpl--4405b6d3:157c2ee50a2:-3370</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--328982ea:155d52a5150:62cd</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--4405b6d3:157c2ee50a2:-3371</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>
