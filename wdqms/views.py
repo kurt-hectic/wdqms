@@ -431,8 +431,8 @@ def observations_agg(request,center=None,date=None,hour=None,variable=None):
     return nr_obs
 
 def map(request,filetype=None,center=None,date=None,hour=None):
-    style = request.GET.get('style','wdqmsmap')
-    if style not in ['wdqmsmap','wdqmsmaplpr']:
+    style = request.GET.get('style','oscar')
+    if style not in ['oscar','gbon']:
       raise ValueError("{} not supported".format(style))
     template = loader.get_template('map.html')
     if date:

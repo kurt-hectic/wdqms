@@ -41,8 +41,11 @@
     <styleParameterFilter>
       <key>STYLES</key>
       <defaultValue></defaultValue>
-      <availableStyles class="sorted-set"/>
-      <defaultStyle>wdqms_test:received_vs_expected</defaultStyle>
+      <availableStyles class="sorted-set">
+        <string>wdqms_test:gbon</string>
+        <string>wdqms_test:oscar</string>
+      </availableStyles>
+      <defaultStyle>wdqms_test:oscar</defaultStyle>
     </styleParameterFilter>
   </parameterFilters>
   <gutter>0</gutter>

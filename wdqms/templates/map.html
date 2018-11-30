@@ -5,7 +5,7 @@
 {% block rightcol %}
 		<h1>NWP monitoring pilot project</h2>		
 	
-		<div>
+			<div>
 			<select class="mycontrol" id="filetype">
 				<option value="SYNOP" selected="selected">SYNOP (surface pressure)</option>
 				<option value="TEMP">TEMP</option>
@@ -19,8 +19,17 @@
 				<option>ALL</option>
 			</select>
 			<label>select center</label>
+			<div>
 			<input type="text" id="datepicker" ></input>
 			<label>select date</label>
+			</div>
+			<div>
+			<select class="mycontrol" id="style">
+				<option value="oscar" selected="selected">OSCAR</option>
+				<option value="gbon">GBON</option>
+			</select>
+			<label>select style</label>
+			</div>
 			<div>
 			<input type="radio" name="hourpicker" value="0">0h</input>
 			<input type="radio" name="hourpicker" value="6">6h</input>
@@ -30,21 +39,21 @@
 
 			<div id="synoplegend">
 			<div><h2>Nr. expected vs. Nr. Received</h2></div>
-			{% if style == "wdqmsmap" %}
 			<div style="color:#009900">normal (>= 80%)</div>
 			<div style="color:#ff9900">availability isuses (>=30%)</div>
 			<div style="color:#ff3300">availability isuses (&lt;30%) </div>
 			<div style="color:#000000">did not report in period </div>
 			<div style="color:#e5e600">not in OSCAR/Surface </div>
 			<div style="color:#ff33cc">more than 100% </div>
-			{% else %}
+			</div>
+			<div id="synoplegendgbon">
+			<div><h2>Nr. expected vs. Nr. Received</h2></div>
 			<div style="color:#00FF00">all observations in period</div>
 			<div style="color:#009900">two observations in period</div>
 			<div style="color:#0000CD">one observation in period </div>
 			<div style="color:#000000">did not report in period </div>
 			<div style="color:#e5e600">not in OSCAR/Surface </div>
 			<div style="color:#ff33cc">more than 100% </div>
-			{% endif %}
 			</div>
 			<div id="templegend">
 			<div><h2>Complete radiosonde launches</h2><h2></h2></div>
@@ -158,7 +167,7 @@ var obslayer =  new ol.layer.Image({
           params: {'FORMAT': 'image/png',
                    'VERSION': '1.1.1',  
                 LAYERS: 'received_vs_expected',
-                //STYLES: '{{style}}',
+                STYLES: '{{style}}',
                 STYLES: '',
 		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
           }, 
@@ -234,6 +243,7 @@ function updateMapLayer() {
 			
 	var date = new Date( $('#datepicker').val()  );
 	var hour =  $('input[name="hourpicker"]:checked').val() ;
+	var style = $("#style").val();
 		
 	year = 	date.getFullYear();
 	month = date.getMonth()+1;
@@ -276,6 +286,9 @@ function updateMapLayer() {
 		
 	params = activelayer.getSource().getParams();
 	params.VIEWPARAMS = viewparam;
+	if (filetype == "SYNOP") {
+		params.STYLES = style;
+	}
 	activelayer.setVisible(true);
 		
 	activelayer.getSource().changed();
@@ -354,6 +367,18 @@ $('select.mycontrol').on('change', function() {
 	updateMapLayer();
 });
 
+$('#style').on('change', function() {
+	var style = $("#style").val();
+
+	if (style=="oscar") {
+		$("#synoplegend").show();
+		$("#synoplegendgbon").hide();
+	} else if (style  == "gbon") {
+		$("#synoplegend").hide();
+		$("#synoplegendgbon").show();
+	}
+});
+
 $('#filetype').on('change', function() {
 	var filetype = $("#filetype").val();
 	console.log("in filetype change");
@@ -427,7 +452,7 @@ map.on('singleclick', function(evt) {
 			//console.log(idx);
 			prop = data.features[idx].properties;
 			if (filetype == "SYNOP") {
-			    {% if style == "wdqmsmap"  %}
+			    {% if style == "oscar"  %}
 				if (prop.per_received > 1.0) {
 					color="#ff33cc";			
 				}	
@@ -527,6 +552,18 @@ $( document ).ready(function() {
 	{% endif %}
 	{% if directdate %}
 	updateMapLayer(); 
+	if ( $("#filetype").val() == "SYNOP" ) {
+		$("#templegend").hide();
+		if ( $("#style").val() == "oscar" ) {
+			$("#synoplegendgbon").hide();
+			$("#synoplegendg").show();
+		} else {
+			$("#synoplegendgbon").show();
+			$("#synoplegendg").hide();
+		}
+	} else {
+		$("#synoplegend").hide();
+	}
 	{% endif %}
 });
 

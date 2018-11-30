@@ -6,6 +6,9 @@ import pandas as pd
 import traceback
 import gzip
 import re
+import json
+import calendar
+from collections import namedtuple
 import datetime
 from timeit import default_timer as timer
 from django.contrib.gis.geos import Point
@@ -50,37 +53,42 @@ class NwpDownloadTask:
 
         for schedule in schedules:
 
+            operatingStatus = int(schedule["operatingStatus"])
+            if not operatingStatus:
+                continue
+
             key = makeScheduleKey(schedule)
             if key in self.scheduleCache:
-                observations.append( self.scheduleCache[key] )
+                observations.extend( self.scheduleCache[key] )
                 continue
 
             try:
                 weekday_since=int(schedule["weekFrom"])-1
-                weekday_till=int(schedule["weekTo"]-1
+                weekday_till=int(schedule["weekTo"])-1
                 month_since=int(schedule["monthFrom"])
-                month_till=int(schedule["monthTo"]
+                month_till=int(schedule["monthTo"])
                 hour_since=int(schedule["hourFrom"])
-                hour_till=int(schedule["hourTo"]
+                hour_till=int(schedule["hourTo"])
                 minute_since=int(schedule["minuteFrom"])
-                minute_till=int(schedule["minuteTo"]
-                inteval = int(schedule["interval"])
+                minute_till=int(schedule["minuteTo"])
+                interval = int(schedule["interval"])
             except:
-                print("schdule {} invalid".format(schedule)
+                print("schedule {} invalid".format(schedule))
                 continue
 
             # upper and lower boundaries of the indicated 6h period TODO: check if this corresponds to the agreed time windows
-            medium_dt = datetime.datetime.strptime( "{} {}".format(period_date,0) , "%Y%m%d %H"   )
+            medium_dt = period_date
             lower_dt = medium_dt - datetime.timedelta(hours=3)
             upper_dt = medium_dt + datetime.timedelta(hours=3)
 
             # now we calculate the list of possible observations based on schedule and calculated possible years
             # first we need upper and lower boundaries of the schedule..        
             # years are based on the date of the 6h period (since years are not in the schedule we need to approximate.. one solution could be to fetch historic deployments from OSCAR)
+            timezone = pytz.timezone("UTC")
             current_year = lower_dt.year
             last_day_upper = calendar.monthrange( current_year ,  month_till )[1]
-            lower_sched_dt = datetime.datetime( lower_dt.year , month_since, 1 , hour_since , minute_since  )
-            upper_sched_dt = datetime.datetime( upper_dt.year , month_till, last_day_upper , hour_till , minute_till  )
+            lower_sched_dt = pytz.utc.localize(datetime.datetime( lower_dt.year , month_since, 1 , hour_since , minute_since  ))
+            upper_sched_dt = pytz.utc.localize(datetime.datetime( upper_dt.year , month_till, last_day_upper , hour_till , minute_till  ))
 
             # we use ranges to identify the period of time where current 6h period and schedule overlap
             Range = namedtuple('Range', ['start', 'end'])
@@ -95,10 +103,10 @@ class NwpDownloadTask:
             # genrate observations
             date_list = [latest_start + datetime.timedelta(seconds=interval) * x for x in range(0,  step   )]
 
-            observations.append(date_list)
+            observations.extend(date_list)
             self.scheduleCache[key] = date_list
 
-        return len( set(observations) )
+        return len(set(observations))
 
 
     def updateDBstats(self):
@@ -173,10 +181,13 @@ class NwpDownloadTask:
 
         # get the current stations in the DB. Only get the latest of each station
         current_stations = {}
-        for station in Station.objects.filter(closed=False).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period
+        for station in Station.objects.filter(closed=False,created__lte=metadata["date"]).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period (insert additional filter condition?)
+            schedules = json.loads( station.schedules )
+            nr_expected = self.calculateNrObservations( metadata["date"] , schedules )
+
             current_stations[station.wigosid]= { 'wigosid' : station.wigosid , 'id' : station.id , 'name' : station.name , 
                                                     'latitude' : station.location.coords[1] , 'longitude' : station.location.coords[0] ,
-                                                    'schedules' : json.loads( station.schedules )   }
+                                                    'nr_expected' : nr_expected   }
 
         df_oscar = pd.DataFrame.from_dict( current_stations , orient='index' )
         if len(df_oscar) == 0:
@@ -265,7 +276,6 @@ class NwpDownloadTask:
 
 
         print("len oscar %s len obs %s len obs_osc %s len ignored_stat %s len ignoed obs %s" % ( nr_oscar , nr_obs , nr_obs_agg , len(df_ignored_stations),len(df_ignored_obs)))
-
 
         # empty stations 
 
