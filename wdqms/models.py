@@ -2,6 +2,7 @@ from django.contrib.gis.db import models
 from django.utils import timezone
 from datetime import date
 import datetime
+import json
 from django.utils import timezone
 
     
@@ -13,10 +14,7 @@ class Station(models.Model):
     #iso3 = models.CharField(max_length=3,blank=True,null=True)
     region = models.CharField(max_length=200)
     stationtype = models.CharField(max_length=10)
-    nrExp0 = models.IntegerField()
-    nrExp6 = models.IntegerField()
-    nrExp12 = models.IntegerField()
-    nrExp18 = models.IntegerField()
+    schedules = models.TextField()
     closed = models.BooleanField(default=False)
     created = models.DateTimeField(blank=True,default=timezone.now)
     country = models.ForeignKey("Country",db_column='iso3',null=True,on_delete=models.SET_NULL,)
@@ -28,16 +26,19 @@ class Station(models.Model):
 
         if location_self != location_other:
             print("{} different location {} {}".format(self.wigosid,location_self,location_other))
+            return False
 
-        cmpattr = ['name','wigosid','country','region','nrExp0','nrExp6','nrExp12','nrExp18','closed']
+        cmpattr = ['name','wigosid','country','region','closed']
 
         for ca in cmpattr:
             if getattr(self,ca) != getattr(other,ca):
                 print("{}: {} and {} unequal {}".format(ca,getattr(self,ca),getattr(other,ca),self.wigosid))
                 return False
 
-        if location_self != location_other :
-            print("location: {} and {} unequal {}".format(location_self,location_other,self.wigosid))
+        schedules_self = json.loads( self.schedules )
+        schedules_other = json.loads( other.schedules )
+        if schedules_self != schedules_other:
+            print("{}: schedules different. {} vs. {}.".format(self.wigosid,schedules_self,schedules_other))
             return False
     
         return True

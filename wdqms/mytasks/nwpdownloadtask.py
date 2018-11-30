@@ -39,6 +39,68 @@ class NwpDownloadTask:
         self.log.addHandler(out_hdlr)
         self.log.setLevel(logging.INFO)
 
+        self.scheduleCache = {}
+
+    def calculateNrObservations(self, period_date, schedules):
+
+        def makeScheduleKey(schedule):
+            return "{monthFrom}-{monthTo}-{weekFrom}-{weekTo}-{hourFrom}-{hourTo}-{minuteFrom}-{minuteTo}-{interval}".format(**schedule)
+
+        observations = []
+
+        for schedule in schedules:
+
+            key = makeScheduleKey(schedule)
+            if key in self.scheduleCache:
+                observations.append( self.scheduleCache[key] )
+                continue
+
+            try:
+                weekday_since=int(schedule["weekFrom"])-1
+                weekday_till=int(schedule["weekTo"]-1
+                month_since=int(schedule["monthFrom"])
+                month_till=int(schedule["monthTo"]
+                hour_since=int(schedule["hourFrom"])
+                hour_till=int(schedule["hourTo"]
+                minute_since=int(schedule["minuteFrom"])
+                minute_till=int(schedule["minuteTo"]
+                inteval = int(schedule["interval"])
+            except:
+                print("schdule {} invalid".format(schedule)
+                continue
+
+            # upper and lower boundaries of the indicated 6h period TODO: check if this corresponds to the agreed time windows
+            medium_dt = datetime.datetime.strptime( "{} {}".format(period_date,0) , "%Y%m%d %H"   )
+            lower_dt = medium_dt - datetime.timedelta(hours=3)
+            upper_dt = medium_dt + datetime.timedelta(hours=3)
+
+            # now we calculate the list of possible observations based on schedule and calculated possible years
+            # first we need upper and lower boundaries of the schedule..        
+            # years are based on the date of the 6h period (since years are not in the schedule we need to approximate.. one solution could be to fetch historic deployments from OSCAR)
+            current_year = lower_dt.year
+            last_day_upper = calendar.monthrange( current_year ,  month_till )[1]
+            lower_sched_dt = datetime.datetime( lower_dt.year , month_since, 1 , hour_since , minute_since  )
+            upper_sched_dt = datetime.datetime( upper_dt.year , month_till, last_day_upper , hour_till , minute_till  )
+
+            # we use ranges to identify the period of time where current 6h period and schedule overlap
+            Range = namedtuple('Range', ['start', 'end'])
+            r1 = Range(start=lower_dt, end=upper_dt)
+            r2 = Range(start=lower_sched_dt, end=upper_sched_dt)
+            latest_start = max(r1.start, r2.start)
+            earliest_end = min(r1.end, r2.end)
+
+            # now we can check how many seconds are in the overlapping period and calculate a stepsize which we use to generate actual observations
+            delta = (earliest_end - latest_start).total_seconds()
+            step = int (delta / interval)
+            # genrate observations
+            date_list = [latest_start + datetime.timedelta(seconds=interval) * x for x in range(0,  step   )]
+
+            observations.append(date_list)
+            self.scheduleCache[key] = date_list
+
+        return len( set(observations) )
+
+
     def updateDBstats(self):
 
         sql = """INSERT INTO dbstats(createdate,oid,table_schema,table_name,row_estimate,total_bytes,index_bytes,toast_bytes,table_bytes,total,index,toast,"table")
@@ -111,10 +173,10 @@ class NwpDownloadTask:
 
         # get the current stations in the DB. Only get the latest of each station
         current_stations = {}
-        for station in Station.objects.filter(closed=False).order_by('wigosid', '-created').distinct('wigosid'):
+        for station in Station.objects.filter(closed=False).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period
             current_stations[station.wigosid]= { 'wigosid' : station.wigosid , 'id' : station.id , 'name' : station.name , 
                                                     'latitude' : station.location.coords[1] , 'longitude' : station.location.coords[0] ,
-                                                    'nr_expected' : getattr(station, "nrExp%s" % metadata["date"].hour) }
+                                                    'schedules' : json.loads( station.schedules )   }
 
         df_oscar = pd.DataFrame.from_dict( current_stations , orient='index' )
         if len(df_oscar) == 0:

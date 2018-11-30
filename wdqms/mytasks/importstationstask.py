@@ -33,48 +33,6 @@ class ImportStations():
 
         return "&".join(ret)
 
-    def generate_series_for_interval_byperiod(self, period_date, month_since, month_till, weekday_since , weekday_till, hour_since, hour_till, minute_since, minute_till, interval ):
-        
-        #list of possible observations on the day of the specificed period (to be grouped into 6h intervals)
-        weekday_since=weekday_since-1
-        weekday_till=weekday_till-1
-        
-        medium_dt = datetime.datetime.strptime( "{} {}".format(period_date,0) , "%Y%m%d %H"   )
-        lower_dt = medium_dt - datetime.timedelta(hours=3)
-        upper_dt = medium_dt + datetime.timedelta(hours=21)
-        
-        
-        # list of possible observations based on schedule and calculated possible years
-        current_year = lower_dt.year
-        last_day_upper = calendar.monthrange( current_year ,  month_till )[1]
-        
-        lower_sched_dt = datetime.datetime( lower_dt.year , month_since, 1 , hour_since , minute_since  )
-        upper_sched_dt = datetime.datetime( upper_dt.year , month_till, last_day_upper , hour_till , minute_till  )
-
-        Range = namedtuple('Range', ['start', 'end'])    
-        
-        r1 = Range(start=lower_dt, end=upper_dt)
-        r2 = Range(start=lower_sched_dt, end=upper_sched_dt)
-        
-        latest_start = max(r1.start, r2.start)
-        earliest_end = min(r1.end, r2.end)
-        
-        delta = (earliest_end - latest_start).total_seconds()
-        step = int (delta / interval)
-
-        # list of observations in period 
-        date_list = [latest_start + datetime.timedelta(seconds=interval) * x for x in range(0,  step   )]
-        
-        
-        # group by hour
-        result = { 0 : [] , 6 : [] , 12 : [] , 18 : [] }
-        for mydate in date_list:
-            key = ((mydate + datetime.timedelta(hours=3)).hour // 6 ) * 6  
-            result[ key ].append(mydate)
-        
-        
-        return result
-
 
     def run(self):
         self.importStations()
@@ -82,9 +40,10 @@ class ImportStations():
 
     def importStations(self):
 
-        # if not Station.objects.filter(name__contains='unknown'):
-            # s = Station(name='unknown station',region='unknown',latitude=0,longitude=0,iso3="NUL",wigosid="0-0-0-0",nrExp0=0,nrExp6=0,nrExp12=0,nrExp18=0)
-            # s.save()
+        # we import schedules from OSCAR, then obtain a station list from OSCAR. 
+        # schedules and stationlist from OSCAR use WIGOS IDs. The WDQMS internal station object also uses a WIGOS ID
+        # schedules with a stationID that cannot be matched to the station list are not considered 
+        # schedules with one or more empty fields are also not considered
 
         # get the current stations in the DB. Only get the latest of each station
         current_stations = {}
@@ -117,55 +76,55 @@ class ImportStations():
             print("warning: the following stations could not be mapped to an ISO code %s " % df_missing)
 
         # remove schedules for which we do not have corresponding station info
-        df_oscar_schedules=df_oscar_schedules[df_oscar_schedules["WMO_INDEX_TX"].isin(  df_stations.index ) ]
+        remove_idxs = ~df_oscar_schedules["WMO_INDEX_TX"].isin(  df_stations.index ) 
+        print("removing {} schedules which could not be matched to API based search [ {} ]".format( len(df_oscar_schedules[remove_idxs]), df_oscar_schedules[remove_idxs]["WMO_INDEX_TX"] ))
+        df_oscar_schedules=df_oscar_schedules[~remove_idxs] 
 
-        # remove empty schedules and convert to int
+        # remove empty schedules 
         pd.options.mode.chained_assignment = None
-        filter_cols = [ "MONTH_SINCE_NU" , "MONTH_TILL_NU" , "WEEKDAY_SINCE_NU", "WEEKDAY_TILL_NU", "HOUR_SINCE_NU" , "HOUR_TILL_NU", "MINUTE_SINCE_NU" , "MINUTE_TILL_NU", "TEMP_REP_INTERVAL_NU"]
-        df_oscar_schedules = df_oscar_schedules[df_oscar_schedules[filter_cols].notna().all(axis=1)]
-        df_oscar_schedules.loc[:,filter_cols]  = df_oscar_schedules.loc[:,filter_cols].astype(int)
+        filter_cols = [ "MONTH_SINCE_NU" , "MONTH_TILL_NU" , "WEEKDAY_SINCE_NU", "WEEKDAY_TILL_NU", "HOUR_SINCE_NU" , "HOUR_TILL_NU", "MINUTE_SINCE_NU" , "MINUTE_TILL_NU"]
+        keep_idxs = df_oscar_schedules[filter_cols].notna().all(axis=1) 
+        print("removing {} schedules which have empty values".format( len(df_oscar_schedules[~keep_idxs]), df_oscar_schedules[~keep_idxs]["WMO_INDEX_TX"] ))
+        df_oscar_schedules = df_oscar_schedules[keep_idxs]
+        # convert schedule information to integer
+        #df_oscar_schedules.loc[:,filter_cols]  = df_oscar_schedules.loc[:,schedule_cols].astype(int)
 
         # set empty dataframe cells to None to that Django better handles them in the ORM
         df_stations = df_stations.where( pd.notnull(df_stations) , None )
 
         # compute number expected based on schedule for all operational stations in oscar schedule list
 
-        start_time = timeit.default_timer()
-        stationobservations = {}
-        for index, row in df_oscar_schedules.iterrows():
-            if row["OPERATING_STATUS_DECLARED_ID"]:
-                idx = row["WMO_INDEX_TX"]
-                observations = self.generate_series_for_interval_byperiod(today, row["MONTH_SINCE_NU"] , row["MONTH_TILL_NU"] , 
-                    row["WEEKDAY_SINCE_NU"] , row["WEEKDAY_TILL_NU"] , 
-                    row["HOUR_SINCE_NU"] , row["HOUR_TILL_NU"],
-                    row["MINUTE_SINCE_NU"] , row["MINUTE_TILL_NU"],
-                    row["TEMP_REP_INTERVAL_NU"]
-                    )
+        # we allow NaN values for minutes and reporting interval.. convert from pandas representation to JSON
+        def parseVals(val):
+            try:
+                return int(val)
+            except:
+                return ''
 
-            if idx in stationobservations:
-                for p in [0,6,12,18]:
-                    stationobservations[idx][p] = stationobservations[idx][p].union( set(observations[p]) )
-            else:
-                stationobservations[idx] = {}
-                for p in [0,6,12,18]:
-                    stationobservations[idx][p] = set(observations[p])    
+
+        start_time = timeit.default_timer()
+        stationschedules = {}
+        for idx, row in df_oscar_schedules.iterrows():
+            wigosid = row["WMO_INDEX_TX"]
+            schedule = {
+                'wigosID' : wigosid,
+                'operatingStatus' : int(row["OPERATING_STATUS_DECLARED_ID"]),
+                'monthFrom' :  int(row["MONTH_SINCE_NU"]) , 'monthTo' : int(row["MONTH_TILL_NU"]),
+                'weekFrom' :  int(row["WEEKDAY_SINCE_NU"]) , 'weekTo' : int(row["WEEKDAY_TILL_NU"]),
+                'hourFrom' :  int(row["HOUR_SINCE_NU"]) , 'hourTo' : int(row["HOUR_TILL_NU"]),
+                'minuteFrom' :  parseVals(row["MINUTE_SINCE_NU"]) , 'minuteTo' : parseVals(row["MINUTE_TILL_NU"]),
+                'interval' : parseVals(row["TEMP_REP_INTERVAL_NU"])
+            }
+        
+            if not wigosid in stationschedules:
+                stationschedules[wigosid] = { 'schedules' : [] }
+
+            stationschedules[wigosid]['schedules'].append( schedule )
 
         elapsed = timeit.default_timer() - start_time
 
         print("computation of schedules of all stations took {} sec".format(elapsed))
 
-        # assign default values for nr. expected for stations in OSCAR
-        DEFAULT_NR_EXPECTED = 2 #assume 3 hourly observations 
-        df_stations["Nr Exp 0"] = DEFAULT_NR_EXPECTED
-        df_stations["Nr Exp 6"] = DEFAULT_NR_EXPECTED
-        df_stations["Nr Exp 12"] = DEFAULT_NR_EXPECTED
-        df_stations["Nr Exp 18"] = DEFAULT_NR_EXPECTED
-
-        # now assign values 
-        for idx,obs in stationobservations.items():
-            for p in [0,6,12,18]:
-                df_stations.loc[idx,"Nr Exp %s" % p] = len(obs[p])
-        
         # create objects in the DB
         mapper = { 
             'CXR' : 'AUS',
@@ -178,30 +137,43 @@ class ImportStations():
 
         counter=0
         error_counter=0
+        no_schedule_counter=0
         processed_stations = {}
-        for idx,station in df_stations.iterrows():
-            wigosid="%s" % idx
+        for wigosid,station in df_stations.iterrows():
+            wigosid="%s" % wigosid
             iso3 = station["iso3"] if not station["iso3"] in mapper else mapper[station["iso3"]]
+
+            # sort schedules to guarante comparable representation in DB
+            if wigosid in stationschedules:
+                schedulesJson = json.dumps( stationschedules[wigosid]['schedules'] )
+            else:
+                #print("station {} has no schedule information.. proceeding anyway".format(wigosid))
+                schedulesJson = "{}"
             
             s = Station( name=station["name"],wigosid=wigosid, country_id=iso3,
                 location=Point( station["longitude"],station["latitude"] ) ,stationtype="SYNOP", region=station["region"],
-                nrExp0=station["Nr Exp 0"], nrExp6=station["Nr Exp 6"], nrExp12=station["Nr Exp 12"], nrExp18=station["Nr Exp 18"]
+                schedules = schedulesJson
             )
             processed_stations[wigosid]=True
             if wigosid not in current_stations or current_stations[wigosid] != s : #only insert new object if it is different from previous
                 try:
                     s.save()
                     counter+=1
+                    if wigosid not in stationschedules:
+                        no_schedule_counter+=1
                 except IntegrityError as e:
                     error_counter+=1
                     print("cannot save station {}. error: {}".format(s,e))
 
+        # process stations that got closed
         for wigosid,station in current_stations.items():
             if not wigosid in processed_stations and not station.closed: #clone station and set it to closed
-                station.pk = None
+                station.pk = None # This is for cloning the station
                 station.closed = True
                 station.save()
 
         print("inserted %s new stations" % counter)
         if error_counter>0:
             print("did not insert %s stations due to consistency errors" % error_counter)
+        if no_schedule_counter>0:
+            print("inserted %s stations with empty schedules" % no_schedule_counter)
