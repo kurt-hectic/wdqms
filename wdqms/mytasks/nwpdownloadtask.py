@@ -44,6 +44,19 @@ class NwpDownloadTask:
 
         self.scheduleCache = {}
 
+
+        empty_station = Station.objects.filter(name='unknown station',wigosid='0-0-0-0')
+        if len(empty_station) > 1:
+            raise Exeption("too many empty station stubs in DB")
+    
+        if len(empty_station) == 1 :
+            empty_station = empty_station[0]
+        else:
+            empty_station = Station(name='unknown station', country=None , wigosid='0-0-0-0', region='unknown', closed=True, stationtype='unknown', location=Point(0,0) )
+            empty_station.save()    
+        self.empty_station_id = empty_station.id
+        
+
     def calculateNrObservations(self, period_date, schedules):
 
         def makeScheduleKey(schedule):
@@ -73,7 +86,7 @@ class NwpDownloadTask:
                 minute_till=int(schedule["minuteTo"])
                 interval = int(schedule["interval"])
             except:
-                print("schedule {} invalid".format(schedule))
+                #print("schedule {} invalid".format(schedule))
                 continue
 
             # upper and lower boundaries of the indicated 6h period TODO: check if this corresponds to the agreed time windows
@@ -259,7 +272,7 @@ class NwpDownloadTask:
             # identify stations in OSCAR and copy location. set id of empty station for stations not in OSCAR
             # OSCAR coordinates are more authorative. If we have no match we use what was reported in the message
             idx_not_in_oscar = df['wigosid'].isna()
-            df.loc[ idx_not_in_oscar ,'id'] = None
+            df.loc[ idx_not_in_oscar ,'id'] = self.empty_station_id
             df.loc[ idx_not_in_oscar ,'name'] = "Unknown"
 
             #df.loc[ ~idx_not_in_oscar , ["latitude","longitude"]] = df.loc[ ~idx_not_in_oscar , ["latitude"+suffix,"longitude"+suffix]].astype(float)
