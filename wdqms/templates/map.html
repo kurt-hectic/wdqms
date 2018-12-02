@@ -191,7 +191,7 @@ var obslayer_max =  new ol.layer.Image({
           url: '{{ GEOSERVER_URL }}',
           params: {'FORMAT': 'image/png',
                    'VERSION': '1.1.1',  
-                LAYERS: 'percentreceived_max',
+                LAYERS: 'received_vs_expected_max',
                 STYLES: '{{style}}',
 		VIEWPARAMS: 'year=0' // should return nothing.. we set the params when a date is selected
           }, 
@@ -423,8 +423,11 @@ map.on('singleclick', function(evt) {
 		}
 		var url = source.getGetFeatureInfoUrl(
 	  		evt.coordinate, viewResolution, view.getProjection(), {'INFO_FORMAT': 'application/json', 'FEATURE_COUNT': 50});
+		if ( center == "ALL" ) {
+			url=url.replace(/received_vs_expected_max/g,'received_vs_expected_max_features');
+		}
 		//console.log(url);
-		url=url.replace(/percentreceived/g,':percentreceivedex');
+		//url=url.replace(/percentreceived/g,':percentreceivedex');
 		//console.log(url);
 	} else if (filetype == "TEMP") { // nothing for the moment
 		var popupid = "#popuptemp";
@@ -453,14 +456,14 @@ map.on('singleclick', function(evt) {
 			prop = data.features[idx].properties;
 			if (filetype == "SYNOP") {
 			    {% if style == "oscar"  %}
-				if (prop.per_received > 1.0) {
+				if (prop.percentage_received > 100) {
 					color="#ff33cc";			
 				}	
-				else if (prop.per_received>=0.80) {
+				else if (prop.percentage_received>=80) {
 					color="#00cc00";			
-				} else if (prop.per_received < 0.80 && prop.per_received >= 0.30) {
+				} else if (prop.percentage_received < 80 && prop.percentage_received >= 30) {
 					color="#ff9900";			
-				} else if (prop.per_received < 0.30 ) {
+				} else if (prop.percentage_received < 30 ) {
 					color="#ff0000";			
 				} 
 				if (prop.isempty) {
@@ -472,15 +475,15 @@ map.on('singleclick', function(evt) {
 				}
 			      {% else  %}
 	
-				if (prop.per_received > 1.0) {
+				if (prop.percentage_received > 100) {
 					color="#ff33cc";			
 				}	
 				else if (prop.nr_received == 1) {
 					color="#0000CD";			
 				}	
-				else if (prop.per_received==1.00) {
+				else if (prop.percentage_received==100) {
 					color="#00FF00";			
-				} else if (prop.nr_received >=  2 && prop.per_received < 1.0 ) {
+				} else if (prop.nr_received >=  2 && prop.percentage_received < 100 ) {
 					color="#009900";			
 				}
 				if (prop.isempty) {
@@ -490,7 +493,7 @@ map.on('singleclick', function(evt) {
 					color="#ffff00";
 				}
 			     {% endif  %}
-				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.indexnbr+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.stationname+'</a></td><td>'+prop.center+'</td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td><td><a href="{% url 'station'  %}'+prop.wigosid+'">Details</a></td></tr>') ;
+				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.wigosid+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.name+'</a></td><td>'+prop.centre+'</td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td><td><a href="{% url 'station'  %}'+prop.wigosid+'">Details</a></td></tr>') ;
 	
 			} else if (filetype=="TEMP") {
 

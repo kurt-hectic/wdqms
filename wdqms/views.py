@@ -472,7 +472,7 @@ def listimports_json(request):
     for period in periods:
        key = period.date.strftime("%Y/%m/%d")
        if key in dates:
-         val = str(period.hour)
+         val = str(period.date.hour)
          if val not in dates[key]:
             dates[key].append(val)
        else:

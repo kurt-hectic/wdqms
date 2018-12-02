@@ -181,7 +181,8 @@ class NwpDownloadTask:
 
         # get the current stations in the DB. Only get the latest of each station
         current_stations = {}
-        for station in Station.objects.filter(closed=False,created__lte=metadata["date"]).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period (insert additional filter condition?)
+        #for station in Station.objects.filter(closed=False,created__lte=metadata["date"]).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period (insert additional filter condition?)
+        for station in Station.objects.filter(closed=False).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period (insert additional filter condition?)
             schedules = json.loads( station.schedules )
             nr_expected = self.calculateNrObservations( metadata["date"] , schedules )
 
@@ -488,4 +489,4 @@ class NwpDownloadTask:
                         continue
                     name = os.path.join(root, file)
                     self.metaProcessFile(name,center)
-                    return #FIXME: just process one file
+                    #return #FIXME: just process one file
