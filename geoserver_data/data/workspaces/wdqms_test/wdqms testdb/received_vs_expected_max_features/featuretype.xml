@@ -36,13 +36,15 @@
     <entry key="JDBC_VIRTUAL_TABLE">
       <virtualTable>
         <name>received_vs_expected_max_features</name>
-        <sql>select centre,n.geom,isempty,invola,n.wigosid,name, CASE WHEN SUM(nr_expected) &gt; 0 THEN &#xd;
-ceil(( SUM(nr_received)::decimal / AVG(nr_expected) ) * 100) ELSE 0 END as percentage_received ,&#xd;
+        <sql>select center,n.geom,isempty,invola,n.wigosid,name, CASE WHEN SUM(nr_expected) &gt; 0 THEN &#xd;
+ceil(( SUM(nr_received)::decimal / AVG(nr_expected) ) * 100) &#xd;
+WHEN SUM(nr_received)&gt;0 THEN 200&#xd;
+ELSE 0 END as percentage_received ,&#xd;
 SUM(nr_received) as nr_received, AVG(nr_expected)::integer as nr_expected &#xd;
 from nwpdatabyperiod n join station s on (s.id = station_id)&#xd;
 where &#xd;
 assimilationdate = &apos;%year%-%month%-%day% %hourperiod%:00:00&apos; and varid in (110,1) and not hasduplicate &#xd;
-group by n.geom,isempty,invola,n.wigosid,name,centre
+group by n.geom,isempty,invola,n.wigosid,name,center
 </sql>
         <escapeSql>false</escapeSql>
         <geometry>

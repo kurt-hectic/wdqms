@@ -5,7 +5,6 @@ import datetime
 import json
 from django.utils import timezone
 
-    
 
 class Station(models.Model):
     id = models.AutoField(primary_key=True)
@@ -59,7 +58,7 @@ class Station(models.Model):
 class Observation(models.Model):
 
     id = models.AutoField(primary_key=True)
-    centre = models.CharField(max_length=10)
+    center = models.CharField(max_length=10)
     varid = models.PositiveSmallIntegerField()
     observationdate = models.DateTimeField()
     location = models.PointField(db_column='geom')
@@ -83,7 +82,7 @@ class Observation(models.Model):
 class NrObservation(models.Model):
 
     id = models.AutoField(primary_key=True)
-    centre = models.CharField(max_length=10)
+    center = models.CharField(max_length=10)
     varid = models.PositiveSmallIntegerField()
     assimilationdate = models.DateTimeField()
     wigosid = models.CharField(max_length=200,null=True,blank=True)
@@ -115,11 +114,11 @@ class NrObservation(models.Model):
     )
 
     def __str__(self):
-        return "station_id: {} wid: {} invola:{} nr_ex:{} nr_rec: {} date: {} center: {}".format(self.station_id,self.wigosid,self.invola,self.nr_received,self.nr_expected,self.assimilationdate,self.centre)
+        return "station_id: {} wid: {} invola:{} nr_ex:{} nr_rec: {} date: {} center: {}".format(self.station_id,self.wigosid,self.invola,self.nr_received,self.nr_expected,self.assimilationdate,self.center)
 
     class Meta:
         db_table='nwpdatabyperiod'
-        indexes = [ models.Index(fields=['assimilationdate',]) , models.Index(fields=['centre',]) ,  models.Index(fields=['location',])] 
+        indexes = [ models.Index(fields=['assimilationdate',]) , models.Index(fields=['center',]) ,  models.Index(fields=['location',])] 
 
 class Country(models.Model):
     code = models.CharField(db_column='cc',max_length=3,primary_key=True)
@@ -151,10 +150,9 @@ class Country(models.Model):
 
 class Period(models.Model):
     center = models.CharField(max_length=10)
-    filetype = models.CharField(max_length=5)
     date = models.DateTimeField(db_column='mydate')
     filetype = models.CharField(max_length=20)
-
+    processed = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'period'
@@ -163,6 +161,11 @@ class Period(models.Model):
 
     def __str__(self):
         return "{}-{}-{}".format(self.date.strftime('%Y-%m-%d-%H'),self.center,self.filetype)
+
+    def __eq__(self,other):
+        return self.center == other.center and self.filetype == other.filetype and self.date == other.date and self.processed == other.processed 
+
+        
 
 
 class DBStats(models.Model):

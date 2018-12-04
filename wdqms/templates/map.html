@@ -493,7 +493,7 @@ map.on('singleclick', function(evt) {
 					color="#ffff00";
 				}
 			     {% endif  %}
-				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.wigosid+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.name+'</a></td><td>'+prop.centre+'</td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td><td><a href="{% url 'station'  %}'+prop.wigosid+'">Details</a></td></tr>') ;
+				$("#popuptablebody").append('<tr style="color:'+color+';"><td>'+prop.wigosid+'</td><td><a href="{{OSCAR_STATION_REPORT}}'+prop.wigosid+'">'+prop.name+'</a></td><td>'+prop.center+'</td><td>'+prop.nr_received+'</td><td>'+prop.nr_expected+'</td><td><a href="{% url 'station'  %}'+prop.wigosid+'">Details</a></td></tr>') ;
 	
 			} else if (filetype=="TEMP") {
 

@@ -16,7 +16,10 @@ from django.db import transaction
 from django.db import connection
 import pytz
 
-
+pd.set_option('display.height', 1000)
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 1500)
+pd.set_option('display.width', 1200)
 
 
 # TODO: guess NWP center from fileargs .. also, process fileargs
@@ -44,6 +47,9 @@ class NwpDownloadTask:
 
         self.scheduleCache = {}
 
+        self.column_mapper = { 'nr_rec_0' : 'nr_used' , 'nr_rec_1' : 'nr_not_used' ,  'nr_rec_2' : 'nr_rejected' ,  
+                  'nr_rec_3' : 'nr_never_used' , 'nr_rec_4' : 'nr_thinned' , 'nr_rec_5' : 'nr_rejected_da' , 
+                  'nr_rec_6' : 'nr_used_alt' , 'nr_rec_7': 'nr_quality_issue' , 'nr_rec_8' : 'nr_other_issue' , 'nr_rec_9' : 'nr_no_content' }
 
         empty_station = Station.objects.filter(name='unknown station',wigosid='0-0-0-0')
         if len(empty_station) > 1:
@@ -56,6 +62,8 @@ class NwpDownloadTask:
             empty_station.save()    
         self.empty_station_id = empty_station.id
         
+        self.oscar_cols = ["id","latitude","longitude","wigosid","id","nr_expected"]
+        self.batch_size = 1000
 
     def calculateNrObservations(self, period_date, schedules):
 
@@ -173,6 +181,26 @@ class NwpDownloadTask:
 
         return cnt == 0
 
+    def getStations(self,date):
+        current_stations = {}
+        #for station in Station.objects.filter(closed=False,created__lte=date).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period (insert additional filter condition?)
+        for station in Station.objects.filter(closed=False).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period (insert additional filter condition?)
+            schedules = json.loads( station.schedules )
+            nr_expected = self.calculateNrObservations( date , schedules )
+
+            current_stations[station.wigosid]= { 'wigosid' : station.wigosid , 'id' : station.id , 'name' : station.name , 
+                                                    'latitude' : station.location.coords[1] , 'longitude' : station.location.coords[0] ,
+                                                    'nr_expected' : nr_expected   }
+
+        df_oscar = pd.DataFrame.from_dict( current_stations , orient='index' )
+        if len(df_oscar) == 0:
+            raise Exception("no stations in DB ")
+        df_oscar.id = df_oscar.id.astype(int)
+
+        # extract last WIGOS ID block as identifier 
+        df_oscar["local_idx"] = df_oscar["wigosid"].str.split('-').str[3]
+
+        return df_oscar 
 
     def processLines(self,sio,metadata): # need idx of first data row
 
@@ -184,34 +212,18 @@ class NwpDownloadTask:
             'mean_bg_dep' : float , 'std_bg_dep':float , 'levels': str  ,'lastreplevel' : float , 'codetype' : int  }
 
         df_observations = pd.read_csv(sio,dtype=dtypes, na_values={'bg_dep': '******'})
-        df_observations["obsdate"] = pd.to_datetime(df_observations['yyyymmdd'] + ' ' + df_observations['hhmmss'])
+        df_observations["obsdate"] = pd.to_datetime(df_observations['yyyymmdd'] + ' ' + df_observations['hhmmss'].str.strip(), format="%Y%m%d %H%M%S")
         df_observations["obsdate"] = df_observations["obsdate"].dt.tz_localize('UTC')
-        df_observations["centre_id"] = df_observations["centre_id"].str.upper()
+        df_observations["centre_id"] = df_observations["centre_id"].str.upper().replace('ECMF','ECMWF')
         sio.close()
         nr_obs = len(df_observations)
 
-    
-
         # get the current stations in the DB. Only get the latest of each station
-        current_stations = {}
-        #for station in Station.objects.filter(closed=False,created__lte=metadata["date"]).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period (insert additional filter condition?)
-        for station in Station.objects.filter(closed=False).order_by('wigosid', '-created').distinct('wigosid'): #FIXME: stations to be loaded as at time of current 6h period (insert additional filter condition?)
-            schedules = json.loads( station.schedules )
-            nr_expected = self.calculateNrObservations( metadata["date"] , schedules )
 
-            current_stations[station.wigosid]= { 'wigosid' : station.wigosid , 'id' : station.id , 'name' : station.name , 
-                                                    'latitude' : station.location.coords[1] , 'longitude' : station.location.coords[0] ,
-                                                    'nr_expected' : nr_expected   }
-
-        df_oscar = pd.DataFrame.from_dict( current_stations , orient='index' )
-        if len(df_oscar) == 0:
-            raise Exception("no stations in DB ")
-        df_oscar.id = df_oscar.id.astype(int)
-        nr_oscar=len(df_oscar)
-
-        # extract last WIGOS ID block as identifier 
-        df_oscar["local_idx"] = df_oscar["wigosid"].str.split('-').str[3]
+        df_oscar = self.getStations(metadata["date"])
         df_oscar = df_oscar.set_index(['local_idx']) #FIXME: risk of duplicates here
+
+        nr_oscar=len(df_oscar)
 
         if not "var_id" in df_observations.columns :
             df_observations["var_id"] = metadata["variable"]
@@ -223,7 +235,7 @@ class NwpDownloadTask:
 
         # remove observations that do not have an integer station ID TODO: this may be revisited
         idx_not_int = pd.to_numeric( df_observations["station_id"] , errors='coerce'  ).isna() 
-        df_ignored_stations =   df_observations[ idx_not_int ] 
+        df_ignored_stations = df_observations[ idx_not_int ] 
         df_observations = df_observations[ ~idx_not_int ]
         
         #fix some old NCEP data
@@ -231,44 +243,13 @@ class NwpDownloadTask:
             print("correcting latitude")
             df_observations["latitude"] = - (360 - df_observations["latitude"])
 
-        # aggregate by station, get total number received and mean background departure
-        df_obs_total = df_observations.groupby(['station_id','var_id','centre_id']).agg( 
-                {'var_id' : 'count' , 'bg_dep' : 'mean' , 'latitude' : 'first' ,  'longitude' : 'first'    } )
-        #df_left.columns=df_left.columns.droplevel(0)
-        #df_obs_total.columns = ['nr_received','avg_bg_dep','latitude','longitude']
-        df_obs_total.rename(inplace=True, columns={ 'var_id': 'nr_received' , 'bg_dep' : 'avg_bg_dep'} )
-
-
-        # aggregate by station and statusflag to get number by statusflag
-        df_obs_agg = df_observations.groupby( ['station_id','statusflag','var_id','centre_id'] )['bg_dep'].count().reset_index()
-        df_obs_agg = df_obs_agg.set_index(['station_id','var_id','centre_id','statusflag'])
-        #df_right.rename(columns={'o-b':'count'},inplace=True)
-        df_obs_agg = df_obs_agg.unstack(level=-1) # transpose the groups to get rows as columns
-        df_obs_agg.columns=[ "nr_rec_{}".format(x[1])  for x in df_obs_agg.columns.ravel()]
-        column_mapper = { 'nr_rec_0' : 'nr_used' , 'nr_rec_1' : 'nr_not_used' ,  'nr_rec_2' : 'nr_rejected' ,  
-                  'nr_rec_3' : 'nr_never_used' , 'nr_rec_4' : 'nr_thinned' , 'nr_rec_5' : 'nr_rejected_da' , 
-                  'nr_rec_6' : 'nr_used_alt' , 'nr_rec_7': 'nr_quality_issue' , 'nr_rec_8' : 'nr_other_issue' , 'nr_rec_9' : 'nr_no_content' }
-        df_obs_agg.rename( inplace=True, columns=column_mapper )
-        df_obs_agg["isempty"] = False
-
-        df_obs_agg = df_obs_agg.join( df_obs_total  )
-        df_obs_agg = df_obs_agg.reset_index()
-
-        df_obs_agg["assimilationdate"] = metadata["date"]
 
         # match observations with stations. local_idx (extracted from OSCAR WIGOS ID) and station_id (from NWP file) as join keys
-        oscar_cols = ["latitude","longitude","wigosid","id","nr_expected"]
         suffix = '_oscar'
-        df_observations = df_observations.join( df_oscar[oscar_cols] , on='station_id' , how='left' , rsuffix=suffix ).reset_index()
+        df_observations = df_observations.join( df_oscar[self.oscar_cols] , on='station_id' , how='left' , rsuffix=suffix ).reset_index()
         nr_obs = len(df_observations)
 
-
-        # join with oscar info
-        df_obs_agg=df_obs_agg.join( df_oscar[oscar_cols] , on='station_id' , how='left', rsuffix=suffix) 
-        nr_obs_agg = len(df_obs_agg)
-
-        
-        for df in [df_observations, df_obs_agg]:
+        for df in [df_observations]:
             # identify stations in OSCAR and copy location. set id of empty station for stations not in OSCAR
             # OSCAR coordinates are more authorative. If we have no match we use what was reported in the message
             idx_not_in_oscar = df['wigosid'].isna()
@@ -289,41 +270,24 @@ class NwpDownloadTask:
             #print( df[ df[['latitude','longitude']].isnull().any(axis=1) ] )
 
 
-        print("len oscar %s len obs %s len obs_osc %s len ignored_stat %s len ignoed obs %s" % ( nr_oscar , nr_obs , nr_obs_agg , len(df_ignored_stations),len(df_ignored_obs)))
+        print("len oscar %s len obs %s len  len ignored_stat %s len ignoed obs %s" % ( nr_oscar , nr_obs , len(df_ignored_stations),len(df_ignored_obs)))
 
-        # empty stations 
 
-        df_report_expected = df_oscar[df_oscar["nr_expected"] > 0].set_index('id') # stations which we expected at least a report from
-        df_not_reporting = df_report_expected.join( df_observations.set_index('id')["obsdate"] ,how='left') # remove those stations which did report (a variable we expected)
-        df_not_reporting = df_not_reporting[ df_not_reporting["obsdate"].isna() ]
-        df_not_reporting.loc[:,"nr_received"] = 0  
-        df_not_reporting.loc[:, "invola"] = True
-        df_not_reporting.loc[:, "isempty"] = True
-        df_not_reporting.loc[:, "hasduplicate"] = False
-        df_not_reporting.loc[:, "centre_id"] =  metadata["center"]
-        df_not_reporting.loc[:, "var_id"] =  metadata["variable"]
-        df_not_reporting.rename( columns={'obsdate':'assimilationdate'} , inplace=True)
-        df_not_reporting["assimilationdate"] = metadata["date"]
 
-        df_obs_agg =  pd.concat( [df_obs_agg , df_not_reporting] )
-
-        # mark duplicates TODO: need to test this
-        if metadata["filetype"] == "SYNOP": 
-            df_duplicate = df_obs_agg.reset_index().set_index('station_id')
-            duplicates = df_duplicate[df_duplicate["var_id"]==110].join( df_duplicate[ df_duplicate["var_id"]==1 ], how='inner' , lsuffix="_left").index.tolist()
-            df_obs_agg["hasduplicate"] = ( df_obs_agg.index.isin( duplicates ) ) & ( df_obs_agg["var_id"] == 1 )
-
+        df_observations = df_observations[['centre_id','var_id','obsdate','statusflag','bg_dep','latitude','longitude','id','wigosid']]
+        df_observations = df_observations.loc[:,~df_observations.columns.duplicated()]
 
         print("insert objects into DB")
-        batch_size = 1000
         with transaction.atomic():
-            p = Period(filetype=metadata["filetype"],center=metadata["center"],date=metadata["date"])
+            p = Period(filetype=metadata["filetype"],center=metadata["center"],date=metadata["date"],processed=False)
             p.save()
             observations = []
-            df_observations=df_observations.where( df_observations.notnull(), None)
+            df_observations=df_observations.where( (pd.notnull(df_observations)), None)
+            #df_observations.where( (pd.notnull(df_observations)), None)
+            #pd.notnull(df_observations)
             for idx,row in df_observations.iterrows():
                 observations.append( Observation(
-                            centre=row["centre_id"],
+                            center=row["centre_id"],
                             varid=row["var_id"],
                             observationdate=row["obsdate"],
                             period=p,
@@ -335,34 +299,8 @@ class NwpDownloadTask:
                 ) )
 
 
-            observations_nr = []
-            fields =  column_mapper.values()
-
-            df_obs_agg=df_obs_agg.where( df_obs_agg.notnull(), None)
-            for idx,row in df_obs_agg.reset_index().iterrows():
-                no = NrObservation(
-                            centre=row["centre_id"],
-                            varid=row["var_id"],
-                            assimilationdate=row["assimilationdate"],
-                            period=p,
-                            bg_dep=row["avg_bg_dep"],
-                            location=Point( row["longitude"],row["latitude"] ),
-                            station_id = row["id"], 
-                            wigosid = row["wigosid"], 
-                            invola = row["invola"],
-                            isempty = row["isempty"],
-                            hasduplicate = row["hasduplicate"],
-                            nr_expected = row["nr_expected"] ,
-                            nr_received = row["nr_received"] 
-                )
-                for field in fields:
-                    if field in row:
-                        setattr(no,field,row[field])
-
-                observations_nr.append( no )
             
-            Observation.objects.bulk_create( observations , batch_size = batch_size )
-            NrObservation.objects.bulk_create( observations_nr , batch_size = batch_size )
+            Observation.objects.bulk_create( observations , batch_size = self.batch_size )
             self.updateDBstats()
 
         print("end process line")
@@ -503,3 +441,133 @@ class NwpDownloadTask:
                     name = os.path.join(root, file)
                     self.metaProcessFile(name,center)
                     #return #FIXME: just process one file
+
+
+        self.processIntervals()
+
+
+    def processIntervals(self):
+
+        ready_to_process = []
+        periods = Period.objects.order_by('center','filetype','-date')
+        l = len(periods)
+
+        for index,period in enumerate(periods):
+            if period.processed: # do not consider when already processed
+                continue
+            if period.center in ['JMA','NCEP']: # JMA and NCEP files can be processed without preconditions
+                ready_to_process.append(period)
+            if period.center in ['ECMWF','DWD']: # ECMWF and DWD need the previous file to be there
+                if index + 1 < l:
+                    previous = periods[index+1]
+                    if period.date - datetime.timedelta(hours=6) == previous.date and period.center == previous.center and period.filetype == previous.filetype:
+                        ready_to_process.append(period)
+                
+
+        for period in ready_to_process:
+            self.aggregateObservationInterval(period)
+            
+
+
+    def aggregateObservationInterval(self,period):
+    
+        print("aggregating {}".format(period))
+
+        # upper and lower boundaries of integration interval
+        date_lower =  period.date - datetime.timedelta( hours=3 )
+        date_upper =  period.date + datetime.timedelta( hours=3 ) - datetime.timedelta( milliseconds=1 ) # exclude upper boundary
+        date_range = [date_lower, date_upper]
+
+        # get observations from DB for the integration interval 
+        observations = Observation.objects.filter( center = period.center , period__filetype = period.filetype , observationdate__range = date_range )
+        df_observations = pd.DataFrame( list( observations.values('center','varid','observationdate','status','bg_dep','station_id','location','wigosid','period_id') ) )
+        df_observations["latitude"] = [ coord[1] for coord in df_observations['location'] ]
+        df_observations["longitude"] = [ coord[0] for coord in df_observations['location'] ]
+
+
+        # aggregate by station, get total number received and mean background departure
+        df_obs_total = df_observations.groupby(['wigosid','station_id','varid','center']).agg( 
+                {'varid' : 'count' , 'bg_dep' : 'mean' , 'latitude' : 'first' ,  'longitude' : 'first'    } )
+        df_obs_total.rename(inplace=True, columns={ 'varid': 'nr_received' , 'bg_dep' : 'avg_bg_dep'} )
+
+        # aggregate by station and statusflag to get number by statusflag
+        df_obs_agg = df_observations.groupby( ['wigosid','station_id','status','varid','center'] )['bg_dep'].count().reset_index()
+        df_obs_agg = df_obs_agg.set_index(['wigosid','station_id','varid','center','status'])
+        df_obs_agg = df_obs_agg.unstack(level=-1) # transpose the groups to get rows as columns
+        df_obs_agg.columns=[ "nr_rec_{}".format(x[1])  for x in df_obs_agg.columns.ravel()]
+        df_obs_agg.rename( inplace=True, columns=self.column_mapper )
+        df_obs_agg["isempty"] = False
+
+        # combine aggregation by status with overall number received and background departures
+        df_obs_agg = df_obs_agg.join( df_obs_total  )
+        df_obs_agg = df_obs_agg.reset_index()
+
+        df_obs_agg["assimilationdate"] = period.date
+
+        # join with OSCAR info 
+        df_oscar = self.getStations(period.date)
+        df_oscar = df_oscar.reset_index()
+        df_oscar = df_oscar.set_index('id') #FIXME: risk of duplicates here
+        suffix = "_oscar"
+        #print(df_oscar)
+        #df_obs_agg=df_obs_agg.join(df_oscar[self.oscar_cols] , on='station_id' , how='left', rsuffix=suffix) 
+        df_obs_agg=df_obs_agg.join(df_oscar , on='station_id' , how='left', rsuffix=suffix) 
+
+        # stations that are not in OSCAR 
+        idx_not_in_oscar = df_obs_agg["station_id"] == self.empty_station_id
+        df_obs_agg["invola"] = ~idx_not_in_oscar
+        df_obs_agg.loc[ ~idx_not_in_oscar , 'latitude' ] = df_obs_agg.loc[ ~idx_not_in_oscar , 'latitude_oscar' ]
+        df_obs_agg.loc[ ~idx_not_in_oscar , 'longitude' ] = df_obs_agg.loc[ ~idx_not_in_oscar , 'longitude_oscar' ]
+
+        # empty stations 
+        df_report_expected = df_oscar[df_oscar["nr_expected"] > 0].set_index('wigosid') # stations which we expected at least a report from
+        df_not_reporting = df_report_expected.join( df_observations.set_index('wigosid')["observationdate"] ,how='left') # remove those stations which did report (a variable we expected)
+        df_not_reporting = df_not_reporting[ df_not_reporting["observationdate"].isna() ]
+        df_not_reporting.loc[:,"nr_received"] = 0  
+        df_not_reporting.loc[:, "invola"] = True
+        df_not_reporting.loc[:, "isempty"] = True
+        df_not_reporting.loc[:, "hasduplicate"] = False
+        df_not_reporting.loc[:, "center"] =  period.center
+        df_not_reporting.loc[:, "varid"] =  110 # FIXME: make dynamic metadata["variable"]
+        df_not_reporting.rename( columns={'observationdate':'assimilationdate'} , inplace=True)
+        df_not_reporting["assimilationdate"] = period.date
+
+        df_obs_agg =  pd.concat( [df_obs_agg , df_not_reporting] )
+
+        # mark duplicates TODO: need to test this
+        if period.filetype == "SYNOP": 
+            df_duplicate = df_obs_agg.reset_index().set_index('station_id')
+            duplicates = df_duplicate[df_duplicate["varid"]==110].join( df_duplicate[ df_duplicate["varid"]==1 ], how='inner' , lsuffix="_left").index.tolist()
+            df_obs_agg["hasduplicate"] = ( df_obs_agg.index.isin( duplicates ) ) & ( df_obs_agg["varid"] == 1 )
+
+        observations_nr = []
+        fields =  self.column_mapper.values()
+
+
+        df_obs_agg=df_obs_agg.where( df_obs_agg.notnull(), None)
+        for idx,row in df_obs_agg.reset_index().iterrows():
+            no = NrObservation(
+                        center=row["center"],
+                        varid=row["varid"],
+                        assimilationdate=row["assimilationdate"],
+                        period=period,
+                        bg_dep=row["avg_bg_dep"],
+                        location=Point( row["longitude"],row["latitude"] ),
+                        station_id = row["station_id"], 
+                        wigosid = row["wigosid"], 
+                        invola = row["invola"],
+                        isempty = row["isempty"],
+                        hasduplicate = row["hasduplicate"],
+                        nr_expected = row["nr_expected"] ,
+                        nr_received = row["nr_received"] 
+            )
+            for field in fields:
+                if field in row:
+                    setattr(no,field,row[field])
+
+            observations_nr.append( no )
+
+        NrObservation.objects.bulk_create( observations_nr , batch_size = self.batch_size )
+
+        period.processed = True
+        period.save()
